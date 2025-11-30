@@ -16,6 +16,11 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface State<T> {
 
+    /**
+     * <p><b><i> This is an internal inventory-framework API that should not be used from outside of
+     * this library. No compatibility guarantees are provided. </i></b>
+     */
+    @ApiStatus.Internal
     AtomicLong ids = new AtomicLong();
 
     /**
@@ -51,8 +56,12 @@ public interface State<T> {
     /**
      * Generates a new state id.
      *
+     * <p><b><i> This is an internal inventory-framework API that should not be used from outside of
+     * this library. No compatibility guarantees are provided. </i></b>
+     *
      * @return A new unique state id.
      */
+    @ApiStatus.Internal
     static long next() {
         return ids.getAndIncrement();
     }

@@ -140,6 +140,40 @@ public interface StateAccess<
     <T> State<T> lazyState(@NotNull Supplier<T> computation);
 
     /**
+     * Creates an immutable lazy asynchronous state.
+     * <p>
+     * This method expects you to return a {@link CompletableFuture} in <code>computation</code>
+     * parameter so elements in the view that are watching that state can hook to it and wait
+     * until that future gets completed to proceed with whatever they are willing to do.
+     * <p>
+     * <b>This API is experimental and is not subject to the general compatibility guarantees such API
+     * may be changed or may be removed completely in any further release.</b>
+     *
+     * @param computation The value factory.
+     * @param <T>         The state value type.
+     * @return A new lazy asynchronous state instance.
+     */
+    @ApiStatus.Experimental
+    <T> State<T> lazyAsyncState(@NotNull Supplier<CompletableFuture<T>> computation);
+
+    /**
+     * Creates an immutable lazy asynchronous state.
+     * <p>
+     * This method expects you to return a {@link CompletableFuture} in <code>computation</code>
+     * parameter so elements in the view that are watching that state can hook to it and wait
+     * until that future gets completed to proceed with whatever they are willing to do.
+     * <p>
+     * <b>This API is experimental and is not subject to the general compatibility guarantees such API
+     * may be changed or may be removed completely in any further release.</b>
+     *
+     * @param computation The value factory.
+     * @param <T>         The state value type.
+     * @return A new lazy asynchronous state instance.
+     */
+    @ApiStatus.Experimental
+    <T> State<T> lazyAsyncState(@NotNull Function<Context, CompletableFuture<T>> computation);
+
+    /**
      * Creates a mutable {@link #lazyState(Function) lazy state} whose value is always computed
      * from the initial data set by its {@link StateValueHost}.
      * <p>

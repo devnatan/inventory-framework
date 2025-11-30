@@ -665,6 +665,18 @@ public abstract class PlatformView<
     }
 
     @Override
+    public <T> State<T> lazyAsyncState(@NotNull Supplier<CompletableFuture<T>> computation) {
+        requireNotInitialized();
+        return stateAccess.lazyAsyncState(computation);
+    }
+
+    @Override
+    public <T> State<T> lazyAsyncState(@NotNull Function<TContext, CompletableFuture<T>> computation) {
+        requireNotInitialized();
+        return stateAccess.lazyAsyncState(computation);
+    }
+
+    @Override
     public final <T> MutableState<T> initialState() {
         requireNotInitialized();
         return stateAccess.initialState();
