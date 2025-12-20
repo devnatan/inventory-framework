@@ -38,7 +38,8 @@ body:
       description: On which platform did the bug occur?
       options:
         - label: Bukkit
-        - label: Sponge
+        - label: Paper
+        - label: Minestom
         - label: Other
   - type: input
     id: server-version
