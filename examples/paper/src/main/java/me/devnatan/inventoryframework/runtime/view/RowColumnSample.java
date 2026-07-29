@@ -16,14 +16,17 @@ public class RowColumnSample extends View {
 
     @Override
     public void onFirstRender(@NotNull RenderContext render) {
+        final int columnsCount = render.getContainer().getColumnsCount();
+        final int rowsCount = render.getContainer().getRowsCount();
+
         // Fills the whole first row, left to right.
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < columnsCount; i++) {
             render.row(1).withItem(new ItemStack(Material.LIME_STAINED_GLASS_PANE));
         }
 
         // Fills the whole last column, top to bottom.
-        for (int i = 0; i < 4; i++) {
-            render.column(9).withItem(new ItemStack(Material.ORANGE_STAINED_GLASS_PANE));
+        for (int i = 0; i < rowsCount; i++) {
+            render.column(columnsCount).withItem(new ItemStack(Material.ORANGE_STAINED_GLASS_PANE));
         }
     }
 }
