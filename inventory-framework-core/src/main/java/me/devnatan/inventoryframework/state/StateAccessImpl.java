@@ -14,6 +14,8 @@ import me.devnatan.inventoryframework.component.PaginationStateBuilder;
 import me.devnatan.inventoryframework.component.PaginationValueConsumer;
 import me.devnatan.inventoryframework.context.IFContext;
 import me.devnatan.inventoryframework.internal.ElementFactory;
+import me.devnatan.inventoryframework.state.timer.TimerImpl;
+import me.devnatan.inventoryframework.state.timer.TimerState;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -124,6 +126,17 @@ public final class StateAccessImpl<
         final long id = State.next();
         final MutableState<T> state =
                 new BaseMutableState<>(id, (host, valueState) -> new InitialDataStateValue(valueState, host, key));
+        this.stateRegistry.registerState(state, this);
+
+        return state;
+    }
+
+    @Override
+    public TimerState timerState(long intervalInTicks) {
+        final long id = State.next();
+        final StateValueFactory factory =
+                (host, state) -> new ImmutableValue(state, new TimerImpl(intervalInTicks, ((IFContext) host)::update));
+        final TimerState state = new TimerStateImpl(id, factory);
         this.stateRegistry.registerState(state, this);
 
         return state;

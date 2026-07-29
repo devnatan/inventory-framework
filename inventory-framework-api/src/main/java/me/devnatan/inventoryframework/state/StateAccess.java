@@ -11,6 +11,7 @@ import me.devnatan.inventoryframework.component.PaginationStateBuilder;
 import me.devnatan.inventoryframework.component.PaginationValueConsumer;
 import me.devnatan.inventoryframework.context.IFContext;
 import me.devnatan.inventoryframework.context.IFOpenContext;
+import me.devnatan.inventoryframework.state.timer.TimerState;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -172,6 +173,27 @@ public interface StateAccess<
      * @return A state computed with an initial opening data value.
      */
     <T> MutableState<T> initialState(@NotNull String key);
+
+    /**
+     * Creates a new timer state.
+     * <p>
+     * Unlike {@link me.devnatan.inventoryframework.ViewConfigBuilder#scheduleUpdate(long)}, the
+     * timer obtained from this state can have its interval changed and can be paused and resumed
+     * at runtime, without opening a new view.
+     * <pre>{@code
+     * TimerState timer = timerState(20);
+     *
+     * config.scheduleUpdate(timer);
+     * }</pre>
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @param intervalInTicks The initial interval, in ticks, the timer will run at.
+     * @return A new timer state.
+     */
+    @ApiStatus.Experimental
+    TimerState timerState(long intervalInTicks);
 
     /**
      * Creates a new immutable pagination with static data source.

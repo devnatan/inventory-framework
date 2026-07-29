@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import me.devnatan.inventoryframework.exception.InvalidLayoutException;
+import me.devnatan.inventoryframework.state.timer.TimerState;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -31,6 +32,7 @@ public final class ViewConfigBuilder {
     private String[] layout = null;
     private final Set<ViewConfig.Modifier> modifiers = new HashSet<>();
     private long updateIntervalInTicks, interactionDelayInMillis;
+    private TimerState updateIntervalState;
     private boolean transitiveInitialData;
 
     /**
@@ -201,6 +203,25 @@ public final class ViewConfigBuilder {
     }
 
     /**
+     * Schedules the view to update on every {@link TimerState timer} loop.
+     * <p>
+     * Unlike {@link #scheduleUpdate(long)}, the given timer can have its interval changed and be
+     * paused and resumed at runtime, without opening a new view.
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @param timerState The timer state that will drive the scheduled updates.
+     * @return This configuration builder.
+     * @see <a href="https://github.com/DevNatan/inventory-framework/wiki/scheduled-updates">Scheduled Updates on Wiki</a>
+     */
+    @ApiStatus.Experimental
+    public ViewConfigBuilder scheduleUpdate(@NotNull TimerState timerState) {
+        this.updateIntervalState = timerState;
+        return this;
+    }
+
+    /**
      * Waits a fixed delay before any player interaction.
      * <p>
      * Interactions called before delay completion are cancelled.
@@ -256,7 +277,8 @@ public final class ViewConfigBuilder {
                 getModifiers(),
                 getUpdateIntervalInTicks(),
                 getInteractionDelayInMillis(),
-                transitiveInitialData);
+                transitiveInitialData,
+                getUpdateIntervalState());
     }
 
     public static boolean isTitleAsComponentSupported() {
@@ -289,6 +311,10 @@ public final class ViewConfigBuilder {
 
     long getUpdateIntervalInTicks() {
         return updateIntervalInTicks;
+    }
+
+    TimerState getUpdateIntervalState() {
+        return updateIntervalState;
     }
 
     long getInteractionDelayInMillis() {

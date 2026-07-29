@@ -13,7 +13,7 @@ public final class ScheduledUpdateStopInterceptor implements PipelineInterceptor
 
         final IFCloseContext context = (IFCloseContext) subject;
         final long updateIntervalInTicks = context.getConfig().getUpdateIntervalInTicks();
-        if (updateIntervalInTicks == 0) {
+        if (updateIntervalInTicks == 0 && context.getConfig().getUpdateIntervalState() == null) {
             return;
         }
 

@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import me.devnatan.inventoryframework.context.IFContext;
+import me.devnatan.inventoryframework.state.timer.TimerState;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,6 +31,7 @@ public class ViewConfig {
     private final Set<Modifier> modifiers;
     private final long updateIntervalInTicks, interactionDelayInMillis;
     private final boolean transitiveInitialData;
+    private final TimerState updateIntervalState;
 
     public ViewConfig(
             Object title,
@@ -40,7 +42,8 @@ public class ViewConfig {
             Set<Modifier> modifiers,
             long updateIntervalInTicks,
             long interactionDelayInMillis,
-            boolean transitiveInitialData) {
+            boolean transitiveInitialData,
+            TimerState updateIntervalState) {
         this.title = title;
         this.size = size;
         this.type = type;
@@ -50,6 +53,7 @@ public class ViewConfig {
         this.updateIntervalInTicks = updateIntervalInTicks;
         this.interactionDelayInMillis = interactionDelayInMillis;
         this.transitiveInitialData = transitiveInitialData;
+        this.updateIntervalState = updateIntervalState;
     }
 
     public Object getTitle() {
@@ -86,6 +90,11 @@ public class ViewConfig {
 
     public boolean isTransitiveInitialData() {
         return transitiveInitialData;
+    }
+
+    @Nullable
+    public TimerState getUpdateIntervalState() {
+        return updateIntervalState;
     }
 
     @VisibleForTesting
@@ -146,7 +155,8 @@ public class ViewConfig {
                 merge(other, ViewConfig::getModifiers, value -> value != null && !value.isEmpty()),
                 merge(other, ViewConfig::getUpdateIntervalInTicks, value -> value != 0),
                 merge(other, ViewConfig::getInteractionDelayInMillis, value -> value != 0),
-                merge(other, ViewConfig::isTransitiveInitialData));
+                merge(other, ViewConfig::isTransitiveInitialData),
+                merge(other, ViewConfig::getUpdateIntervalState, Objects::nonNull));
     }
 
     private <T> T merge(ViewConfig other, Function<ViewConfig, T> retriever) {
@@ -237,7 +247,8 @@ public class ViewConfig {
                 && Objects.equals(getOptions(), that.getOptions())
                 && Arrays.equals(getLayout(), that.getLayout())
                 && Objects.equals(getModifiers(), that.getModifiers())
-                && isTransitiveInitialData() == that.isTransitiveInitialData();
+                && isTransitiveInitialData() == that.isTransitiveInitialData()
+                && Objects.equals(getUpdateIntervalState(), that.getUpdateIntervalState());
     }
 
     @Override
@@ -250,7 +261,8 @@ public class ViewConfig {
                 getModifiers(),
                 getUpdateIntervalInTicks(),
                 getInteractionDelayInMillis(),
-                isTransitiveInitialData());
+                isTransitiveInitialData(),
+                getUpdateIntervalState());
         result = 31 * result + Arrays.hashCode(getLayout());
         return result;
     }
@@ -266,6 +278,7 @@ public class ViewConfig {
                 + modifiers + ", updateIntervalInTicks="
                 + updateIntervalInTicks + ", interactionDelayInMillis="
                 + interactionDelayInMillis + ", transitiveInitialData="
-                + transitiveInitialData + "}";
+                + transitiveInitialData + ", updateIntervalState="
+                + updateIntervalState + "}";
     }
 }
