@@ -1,17 +1,22 @@
 [versions]
 jetbrains-annotations = "26.0.2"
-# Do not update Spigot/Paper to 1.21, InventoryView changed from class to interface type
-# Dynamic Title Update feature throws IncompatibleClassChangeError due to that
-# Feel free to implement a workaround on InventoryUpdate.java if u need to use a 1.21+ specific API
-spigot = "1.20.6-R0.1-SNAPSHOT"
-paperSpigot = "1.20.6-R0.1-SNAPSHOT"
+# InventoryView changed from a class to an interface type in 1.21. That used to throw
+# IncompatibleClassChangeError on the Dynamic Title Update feature when compiled against an
+# older (class-based) InventoryView while running on a newer (interface-based) runtime.
+# This is now handled by McVersion#isModern() branching in InventoryUpdate.java, ReflectionUtils.java
+# and AnvilInputNMS.java, and by compiling inventory-framework-platform-bukkit/-paper against a
+# matching modern Spigot/Paper artifact (see the versions below) instead of the old pinned 1.20.6 one.
+# inventory-framework-platform-paper also requires a Java 25 toolchain, since Paper's own published
+# artifacts for this version declare that requirement (see its build.gradle.kts).
+spigot = "26.1-R0.1-SNAPSHOT"
+paperSpigot = "26.1.2.build.+"
 junit = "6.0.0"
 mockito = "4.11.0"
 adventure-api = "4.25.0"
-kotlin = "1.9.20"
+kotlin = "2.3.21"
 plugin-shadowjar = "8.3.8"
 plugin-spotless = "7.2.1"
-plugin-bukkit = "0.7.1"
+plugin-bukkit = "0.8.0"
 minestom = "b39badc77b"
 folialib = "0.5.1"
 

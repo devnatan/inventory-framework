@@ -143,4 +143,13 @@ public class McVersion implements Comparable<McVersion> {
     public static boolean supports(int minorNumber, int patchNumber) {
         return CURRENT_VERSION.isAtLeast(1, minorNumber, patchNumber);
     }
+
+    /**
+     * Whether the server is running a "modern" Mojang-mapped NMS naming scheme (1.17+, including
+     * the year-based versioning scheme introduced afterwards, e.g. 26.x), as opposed to the legacy
+     * obfuscated/versioned CraftBukkit naming scheme used prior to 1.17.
+     */
+    public static boolean isModern() {
+        return CURRENT_VERSION.getMajor() > 1 || CURRENT_VERSION.getMinor() >= 17;
+    }
 }
