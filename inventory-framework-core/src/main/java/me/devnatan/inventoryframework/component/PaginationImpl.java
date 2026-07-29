@@ -155,7 +155,10 @@ public class PaginationImpl extends AbstractStateValue implements Pagination, In
             isLoading = false;
             simulateStateUpdate();
 
-            if (isLazy())
+            // Computed pagination always recomputes the full source (never reuses it, see the
+            // condition above), so it must be sliced down to the current page just like lazy
+            // pagination is, otherwise every page would render the same leading slice of items.
+            if (isLazy() || isComputed())
                 return Pagination.splitSourceForPage(currentPageIndex(), getPageSize(), getPagesCount(), result);
             else return result;
         });
@@ -550,8 +553,10 @@ public class PaginationImpl extends AbstractStateValue implements Pagination, In
                 "[Pagination] #updated(IFSlotRenderContext) called (forceUpdated = %b, pageWasChanged = %b)",
                 forceUpdated, pageWasChanged);
 
+        // Computed pagination must be recomputed on every update, not just on page change or a
+        // forced update, since its whole premise is that the source is never reused/cached.
         // If page was changed all components will be removed, so don't trigger update on them
-        if (forceUpdated || pageWasChanged) {
+        if (forceUpdated || pageWasChanged || isComputed()) {
             clear(renderContext);
             components = new ArrayList<>();
             loadCurrentPage(renderContext).thenRun(() -> {
@@ -675,7 +680,6 @@ public class PaginationImpl extends AbstractStateValue implements Pagination, In
 
     @Override
     public boolean hasPage(int pageIndex) {
-        if (isComputed()) return true;
         if (pageIndex < 0) return false;
         return pageIndex < getPagesCount();
     }
