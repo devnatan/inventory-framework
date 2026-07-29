@@ -3,7 +3,9 @@ package me.devnatan.inventoryframework.context;
 import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import me.devnatan.inventoryframework.RootView;
@@ -39,6 +41,16 @@ public class MockRenderIFContext extends AbstractIFContext implements IFRenderCo
     @Override
     public List<BiFunction<Integer, Integer, ComponentFactory>> getAvailableSlotFactories() {
         return new ArrayList<>();
+    }
+
+    @Override
+    public Map<Integer, List<BiFunction<Integer, Integer, ComponentFactory>>> getRowSlotFactories() {
+        return new HashMap<>();
+    }
+
+    @Override
+    public Map<Integer, List<BiFunction<Integer, Integer, ComponentFactory>>> getColumnSlotFactories() {
+        return new HashMap<>();
     }
 
     @Override

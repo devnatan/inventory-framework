@@ -23,7 +23,8 @@ public class SamplePlugin extends JavaPlugin {
                         new SimplePagination(),
                         new AutoUpdate(),
                         new PaginationOrientation(),
-                        new TimerSample())
+                        new TimerSample(),
+                        new RowColumnSample())
                 .register();
 
         IFExampleCommandExecutor command = new IFExampleCommandExecutor(viewFrame);

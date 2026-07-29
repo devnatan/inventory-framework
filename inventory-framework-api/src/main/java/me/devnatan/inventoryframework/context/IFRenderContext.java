@@ -1,6 +1,7 @@
 package me.devnatan.inventoryframework.context;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import me.devnatan.inventoryframework.ViewContainer;
 import me.devnatan.inventoryframework.component.ComponentFactory;
@@ -39,6 +40,20 @@ public interface IFRenderContext extends IFConfinedContext {
      */
     @ApiStatus.Internal
     List<BiFunction<Integer, Integer, ComponentFactory>> getAvailableSlotFactories();
+
+    /**
+     * <b><i> This is an internal inventory-framework API that should not be used from outside of
+     * this library. No compatibility guarantees are provided. </i></b>
+     */
+    @ApiStatus.Internal
+    Map<Integer, List<BiFunction<Integer, Integer, ComponentFactory>>> getRowSlotFactories();
+
+    /**
+     * <b><i> This is an internal inventory-framework API that should not be used from outside of
+     * this library. No compatibility guarantees are provided. </i></b>
+     */
+    @ApiStatus.Internal
+    Map<Integer, List<BiFunction<Integer, Integer, ComponentFactory>>> getColumnSlotFactories();
 
     /**
      * The container of this context.

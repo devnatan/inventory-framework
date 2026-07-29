@@ -38,6 +38,7 @@ import me.devnatan.inventoryframework.pipeline.PlatformInitInterceptor;
 import me.devnatan.inventoryframework.pipeline.PlatformOpenInterceptor;
 import me.devnatan.inventoryframework.pipeline.PlatformRenderInterceptor;
 import me.devnatan.inventoryframework.pipeline.PlatformUpdateHandlerInterceptor;
+import me.devnatan.inventoryframework.pipeline.RowColumnSlotInterceptor;
 import me.devnatan.inventoryframework.pipeline.ScheduledUpdateStartInterceptor;
 import me.devnatan.inventoryframework.pipeline.ScheduledUpdateStopInterceptor;
 import me.devnatan.inventoryframework.pipeline.StandardPipelinePhases;
@@ -615,6 +616,7 @@ public abstract class PlatformView<
         pipeline.intercept(StandardPipelinePhases.LAYOUT_RESOLUTION, new LayoutResolutionInterceptor());
         pipeline.intercept(StandardPipelinePhases.FIRST_RENDER, new PlatformRenderInterceptor());
         pipeline.intercept(StandardPipelinePhases.FIRST_RENDER, new LayoutRenderInterceptor());
+        pipeline.intercept(StandardPipelinePhases.FIRST_RENDER, new RowColumnSlotInterceptor());
         pipeline.intercept(StandardPipelinePhases.FIRST_RENDER, new AvailableSlotInterceptor());
         pipeline.intercept(StandardPipelinePhases.FIRST_RENDER, new FirstRenderInterceptor());
         pipeline.intercept(StandardPipelinePhases.VIEWER_ADDED, new ScheduledUpdateStartInterceptor());

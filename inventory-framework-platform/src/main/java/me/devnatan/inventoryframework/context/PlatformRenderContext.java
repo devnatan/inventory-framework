@@ -4,6 +4,7 @@ import static me.devnatan.inventoryframework.utils.SlotConverter.convertSlot;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,6 +44,10 @@ public abstract class PlatformRenderContext<T extends ItemComponentBuilder<T, C>
     private final List<ComponentFactory> componentBuilders = new ArrayList<>();
     private final List<LayoutSlot> layoutSlots = new ArrayList<>();
     private final List<BiFunction<Integer, Integer, ComponentFactory>> availableSlotFactories = new ArrayList<>();
+    private final Map<Integer, List<BiFunction<Integer, Integer, ComponentFactory>>> rowSlotFactories =
+            new LinkedHashMap<>();
+    private final Map<Integer, List<BiFunction<Integer, Integer, ComponentFactory>>> columnSlotFactories =
+            new LinkedHashMap<>();
 
     PlatformRenderContext(
             @NotNull UUID id,
@@ -153,6 +158,88 @@ public abstract class PlatformRenderContext<T extends ItemComponentBuilder<T, C>
      */
     public final void availableSlot(@NotNull BiConsumer<Integer, T> factory) {
         availableSlotFactories.add((index, slot) -> {
+            final T builder = createBuilder();
+            builder.withSlot(slot);
+            factory.accept(index, builder);
+            return (ComponentFactory) builder;
+        });
+    }
+
+    /**
+     * Adds an item in the next available slot of the specified row of this context's container.
+     * <p>
+     * Slots are filled in column order within the row, skipping slots that are already occupied
+     * (e.g. by a layout item). An {@link me.devnatan.inventoryframework.exception.SlotFillExceededException}
+     * is thrown at render time if there are more items than the row can hold.
+     *
+     * @param row The row (1-indexed) to fill.
+     * @return An item builder to configure the item.
+     */
+    public final @NotNull T row(int row) {
+        checkAlignedContainerTypeForSlotAssignment();
+
+        final T builder = createBuilder();
+        rowSlotFactories.computeIfAbsent(row, $ -> new ArrayList<>()).add((index, slot) ->
+                (ComponentFactory) builder.copy().withSlot(slot));
+        return builder;
+    }
+
+    /**
+     * Adds an item in the next available slot of the specified row of this context's container.
+     *
+     * <pre>{@code
+     * row(1, (index, builder) -> builder.withItem(...));
+     * }</pre>
+     *
+     * @param row     The row (1-indexed) to fill.
+     * @param factory A factory to create the item builder to configure the item.
+     *                The first parameter is the iteration index of the available slot within the row.
+     */
+    public final void row(int row, @NotNull BiConsumer<Integer, T> factory) {
+        checkAlignedContainerTypeForSlotAssignment();
+
+        rowSlotFactories.computeIfAbsent(row, $ -> new ArrayList<>()).add((index, slot) -> {
+            final T builder = createBuilder();
+            builder.withSlot(slot);
+            factory.accept(index, builder);
+            return (ComponentFactory) builder;
+        });
+    }
+
+    /**
+     * Adds an item in the next available slot of the specified column of this context's container.
+     * <p>
+     * Slots are filled in row order within the column, skipping slots that are already occupied
+     * (e.g. by a layout item). An {@link me.devnatan.inventoryframework.exception.SlotFillExceededException}
+     * is thrown at render time if there are more items than the column can hold.
+     *
+     * @param column The column (1-indexed) to fill.
+     * @return An item builder to configure the item.
+     */
+    public final @NotNull T column(int column) {
+        checkAlignedContainerTypeForSlotAssignment();
+
+        final T builder = createBuilder();
+        columnSlotFactories.computeIfAbsent(column, $ -> new ArrayList<>()).add((index, slot) ->
+                (ComponentFactory) builder.copy().withSlot(slot));
+        return builder;
+    }
+
+    /**
+     * Adds an item in the next available slot of the specified column of this context's container.
+     *
+     * <pre>{@code
+     * column(1, (index, builder) -> builder.withItem(...));
+     * }</pre>
+     *
+     * @param column  The column (1-indexed) to fill.
+     * @param factory A factory to create the item builder to configure the item.
+     *                The first parameter is the iteration index of the available slot within the column.
+     */
+    public final void column(int column, @NotNull BiConsumer<Integer, T> factory) {
+        checkAlignedContainerTypeForSlotAssignment();
+
+        columnSlotFactories.computeIfAbsent(column, $ -> new ArrayList<>()).add((index, slot) -> {
             final T builder = createBuilder();
             builder.withSlot(slot);
             factory.accept(index, builder);
@@ -276,6 +363,16 @@ public abstract class PlatformRenderContext<T extends ItemComponentBuilder<T, C>
     @Override
     public final List<BiFunction<Integer, Integer, ComponentFactory>> getAvailableSlotFactories() {
         return availableSlotFactories;
+    }
+
+    @Override
+    public final Map<Integer, List<BiFunction<Integer, Integer, ComponentFactory>>> getRowSlotFactories() {
+        return rowSlotFactories;
+    }
+
+    @Override
+    public final Map<Integer, List<BiFunction<Integer, Integer, ComponentFactory>>> getColumnSlotFactories() {
+        return columnSlotFactories;
     }
 
     @Override
