@@ -172,9 +172,13 @@ public abstract class PlatformRenderContext<T extends ItemComponentBuilder<T, C>
      * (e.g. by a layout item). An {@link me.devnatan.inventoryframework.exception.SlotFillExceededException}
      * is thrown at render time if there are more items than the row can hold.
      *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
      * @param row The row (1-indexed) to fill.
      * @return An item builder to configure the item.
      */
+    @ApiStatus.Experimental
     public final @NotNull T row(int row) {
         checkAlignedContainerTypeForSlotAssignment();
 
@@ -191,10 +195,14 @@ public abstract class PlatformRenderContext<T extends ItemComponentBuilder<T, C>
      * row(1, (index, builder) -> builder.withItem(...));
      * }</pre>
      *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
      * @param row     The row (1-indexed) to fill.
      * @param factory A factory to create the item builder to configure the item.
      *                The first parameter is the iteration index of the available slot within the row.
      */
+    @ApiStatus.Experimental
     public final void row(int row, @NotNull BiConsumer<Integer, T> factory) {
         checkAlignedContainerTypeForSlotAssignment();
 
@@ -207,15 +215,73 @@ public abstract class PlatformRenderContext<T extends ItemComponentBuilder<T, C>
     }
 
     /**
+     * Adds an item in the next available slot of the first row of this context's container.
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @return An item builder to configure the item.
+     */
+    @ApiStatus.Experimental
+    public final @NotNull T firstRow() {
+        return row(1);
+    }
+
+    /**
+     * Adds an item in the next available slot of the first row of this context's container.
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @param factory A factory to create the item builder to configure the item.
+     *                The first parameter is the iteration index of the available slot within the row.
+     */
+    @ApiStatus.Experimental
+    public final void firstRow(@NotNull BiConsumer<Integer, T> factory) {
+        row(1, factory);
+    }
+
+    /**
+     * Adds an item in the next available slot of the last row of this context's container.
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @return An item builder to configure the item.
+     */
+    @ApiStatus.Experimental
+    public final @NotNull T lastRow() {
+        return row(getContainer().getRowsCount());
+    }
+
+    /**
+     * Adds an item in the next available slot of the last row of this context's container.
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @param factory A factory to create the item builder to configure the item.
+     *                The first parameter is the iteration index of the available slot within the row.
+     */
+    @ApiStatus.Experimental
+    public final void lastRow(@NotNull BiConsumer<Integer, T> factory) {
+        row(getContainer().getRowsCount(), factory);
+    }
+
+    /**
      * Adds an item in the next available slot of the specified column of this context's container.
      * <p>
      * Slots are filled in row order within the column, skipping slots that are already occupied
      * (e.g. by a layout item). An {@link me.devnatan.inventoryframework.exception.SlotFillExceededException}
      * is thrown at render time if there are more items than the column can hold.
      *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
      * @param column The column (1-indexed) to fill.
      * @return An item builder to configure the item.
      */
+    @ApiStatus.Experimental
     public final @NotNull T column(int column) {
         checkAlignedContainerTypeForSlotAssignment();
 
@@ -232,10 +298,14 @@ public abstract class PlatformRenderContext<T extends ItemComponentBuilder<T, C>
      * column(1, (index, builder) -> builder.withItem(...));
      * }</pre>
      *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
      * @param column  The column (1-indexed) to fill.
      * @param factory A factory to create the item builder to configure the item.
      *                The first parameter is the iteration index of the available slot within the column.
      */
+    @ApiStatus.Experimental
     public final void column(int column, @NotNull BiConsumer<Integer, T> factory) {
         checkAlignedContainerTypeForSlotAssignment();
 
@@ -245,6 +315,60 @@ public abstract class PlatformRenderContext<T extends ItemComponentBuilder<T, C>
             factory.accept(index, builder);
             return (ComponentFactory) builder;
         });
+    }
+
+    /**
+     * Adds an item in the next available slot of the first column of this context's container.
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @return An item builder to configure the item.
+     */
+    @ApiStatus.Experimental
+    public final @NotNull T firstColumn() {
+        return column(1);
+    }
+
+    /**
+     * Adds an item in the next available slot of the first column of this context's container.
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @param factory A factory to create the item builder to configure the item.
+     *                The first parameter is the iteration index of the available slot within the column.
+     */
+    @ApiStatus.Experimental
+    public final void firstColumn(@NotNull BiConsumer<Integer, T> factory) {
+        column(1, factory);
+    }
+
+    /**
+     * Adds an item in the next available slot of the last column of this context's container.
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @return An item builder to configure the item.
+     */
+    @ApiStatus.Experimental
+    public final @NotNull T lastColumn() {
+        return column(getContainer().getColumnsCount());
+    }
+
+    /**
+     * Adds an item in the next available slot of the last column of this context's container.
+     *
+     * <p><b><i> This API is experimental and is not subject to the general compatibility guarantees
+     * such API may be changed or may be removed completely in any further release. </i></b>
+     *
+     * @param factory A factory to create the item builder to configure the item.
+     *                The first parameter is the iteration index of the available slot within the column.
+     */
+    @ApiStatus.Experimental
+    public final void lastColumn(@NotNull BiConsumer<Integer, T> factory) {
+        column(getContainer().getColumnsCount(), factory);
     }
 
     /**
