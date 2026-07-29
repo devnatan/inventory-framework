@@ -24,6 +24,8 @@ tasks.shadowJar {
     archiveBaseName.set("inventory-framework")
     archiveAppendix.set("bukkit")
 
+    relocate("com.tcoded.folialib", "me.devnatan.inventoryframework.libs.folialib")
+
     dependencies {
         exclude {
             it.moduleGroup == "org.jetbrains.kotlin"
