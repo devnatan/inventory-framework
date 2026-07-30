@@ -42,14 +42,34 @@ object ViewExtractor {
 
         val geometry = viewTypeFieldName?.let { viewGeometryFor(it) } ?: DEFAULT_VIEW_GEOMETRY
         val rows = requestedSize?.takeIf { it in 1..geometry.rows } ?: geometry.rows
+        val columns = geometry.columns
+
+        val items = ItemExtractor.extract(uFile, rows, columns)
+        val slots = items.indexedSlots + layoutBoundSlots(layout, items.layoutBindings, columns)
 
         return PreviewModel(
             viewTypeName = viewTypeFieldName ?: DEFAULT_VIEW_TYPE_NAME,
             rows = rows,
-            columns = geometry.columns,
+            columns = columns,
             title = title,
             layout = layout,
+            slots = slots,
         )
+    }
+
+    private fun layoutBoundSlots(
+        layout: List<String>?,
+        layoutBindings: Map<Char, PreviewSlot>,
+        columns: Int,
+    ): Map<Int, PreviewSlot> {
+        if (layout == null || layoutBindings.isEmpty()) return emptyMap()
+        val slots = mutableMapOf<Int, PreviewSlot>()
+        layout.forEachIndexed { row, rowChars ->
+            rowChars.forEachIndexed { col, character ->
+                layoutBindings[character]?.let { slots[row * columns + col] = it }
+            }
+        }
+        return slots
     }
 
     private fun resolveViewTypeFieldName(arg: UExpression?): String? {
