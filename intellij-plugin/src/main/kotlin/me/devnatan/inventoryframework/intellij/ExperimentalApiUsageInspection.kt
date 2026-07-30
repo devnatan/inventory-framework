@@ -17,11 +17,12 @@ private const val EXPERIMENTAL_FQN = "org.jetbrains.annotations.ApiStatus.Experi
 private const val INTERNAL_FQN = "org.jetbrains.annotations.ApiStatus.Internal"
 
 // Internal gets the ordinary yellow warning underline (you really shouldn't be calling this at
-// all); Experimental gets the lighter gray "weak warning" dotted underline (it works, just may
-// change), the same distinction IntelliJ itself uses for weaker suggestions vs real warnings.
+// all). WEAK_WARNING for Experimental was still yellow-family, just thinner - POSSIBLE_PROBLEM
+// is being tried here instead for a genuinely different color; registerProblem only accepts the
+// built-in ProblemHighlightType values, so a fully custom color would need an Annotator instead.
 private enum class ApiStability(val highlightType: ProblemHighlightType, val suffix: String) {
     EXPERIMENTAL(
-        ProblemHighlightType.WEAK_WARNING,
+        ProblemHighlightType.POSSIBLE_PROBLEM,
         "is marked @ApiStatus.Experimental and may change or be removed without notice",
     ),
     INTERNAL(
