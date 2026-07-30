@@ -1,6 +1,8 @@
 package me.devnatan.inventoryframework.intellij
 
-data class PreviewSlot(val material: String?, val dynamic: Boolean)
+import com.intellij.openapi.util.TextRange
+
+data class PreviewSlot(val material: String?, val dynamic: Boolean, val sourceRange: TextRange? = null)
 
 data class PreviewModel(
     val viewTypeName: String,

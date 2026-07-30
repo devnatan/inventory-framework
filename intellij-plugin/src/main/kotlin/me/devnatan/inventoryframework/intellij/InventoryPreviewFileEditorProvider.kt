@@ -16,7 +16,7 @@ class InventoryPreviewFileEditorProvider : FileEditorProvider, DumbAware {
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
         val textEditor = TextEditorProvider.getInstance().createEditor(project, file) as TextEditor
-        val previewEditor = InventoryPreviewFileEditor(project, file)
+        val previewEditor = InventoryPreviewFileEditor(project, file, textEditor)
         return TextEditorWithPreview(textEditor, previewEditor, "Inventory Preview")
     }
 

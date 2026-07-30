@@ -48,23 +48,28 @@ object ItemExtractor {
                 if (declaringClass == null || !declaringClass.startsWith(FRAMEWORK_PACKAGE_PREFIX)) return false
 
                 val methodName = node.methodName
+                val range = node.sourcePsi?.textRange
                 if (methodName in ITEM_BINDING_METHODS && node.valueArguments.size == 1) {
                     val receiverCall = node.receiver?.skipParenthesizedExprDown() as? UCallExpression ?: return false
                     val target = resolveChainTarget(receiverCall, rows, columns) ?: return false
-                    val slot = if (methodName == "withItem") resolveItem(node.valueArguments[0]) else PreviewSlot(null, dynamic = true)
+                    val slot = if (methodName == "withItem") {
+                        resolveItem(node.valueArguments[0])?.copy(sourceRange = range)
+                    } else {
+                        PreviewSlot(null, dynamic = true, sourceRange = range)
+                    }
                     apply(target, slot)
                     return false
                 }
 
                 if (methodName in ROW_COLUMN_FACTORY_METHODS) {
                     resolveFactoryCall(node, rows, columns)?.let { (target, itemExpr) ->
-                        apply(target, resolveItem(itemExpr))
+                        apply(target, resolveItem(itemExpr)?.copy(sourceRange = range))
                     }
                     return false
                 }
 
                 resolveDirectItemCall(node, rows, columns)?.let { (target, itemExpr) ->
-                    apply(target, resolveItem(itemExpr))
+                    apply(target, resolveItem(itemExpr)?.copy(sourceRange = range))
                 }
                 return false
             }
