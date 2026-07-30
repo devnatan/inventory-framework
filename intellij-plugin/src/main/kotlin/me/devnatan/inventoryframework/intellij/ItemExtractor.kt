@@ -5,6 +5,7 @@ import com.intellij.psi.PsiField
 import org.jetbrains.uast.UCallExpression
 import org.jetbrains.uast.UExpression
 import org.jetbrains.uast.UFile
+import org.jetbrains.uast.ULambdaExpression
 import org.jetbrains.uast.ULiteralExpression
 import org.jetbrains.uast.UReferenceExpression
 import org.jetbrains.uast.UVariable
@@ -16,6 +17,7 @@ private const val ITEM_STACK_FQN = "org.bukkit.inventory.ItemStack"
 private const val MATERIAL_FQN = "org.bukkit.Material"
 private const val FRAMEWORK_PACKAGE_PREFIX = "me.devnatan.inventoryframework"
 private val ITEM_BINDING_METHODS = setOf("withItem", "renderWith", "onRender")
+private val ROW_COLUMN_FACTORY_METHODS = setOf("row", "firstRow", "lastRow", "column", "firstColumn", "lastColumn")
 
 private sealed class SlotTarget {
     data class Indices(val slots: List<Int>) : SlotTarget()
@@ -50,6 +52,13 @@ object ItemExtractor {
                     val target = resolveChainTarget(receiverCall, rows, columns) ?: return false
                     val slot = if (methodName == "withItem") resolveItem(node.valueArguments[0]) else PreviewSlot(null, dynamic = true)
                     apply(target, slot)
+                    return false
+                }
+
+                if (methodName in ROW_COLUMN_FACTORY_METHODS) {
+                    resolveFactoryCall(node, rows, columns)?.let { (target, itemExpr) ->
+                        apply(target, resolveItem(itemExpr))
+                    }
                     return false
                 }
 
@@ -96,6 +105,45 @@ object ItemExtractor {
         if (column1Indexed !in 1..columns) return null
         val column0 = column1Indexed - 1
         return SlotTarget.Indices((0 until rows).map { it * columns + column0 })
+    }
+
+    // row/column/firstRow/lastRow/firstColumn/lastColumn also have a `(BiConsumer<Integer, T> factory)`
+    // overload - e.g. `render.firstRow((pos, slot) -> slot.withItem(item))` - where withItem is called
+    // on the lambda's builder parameter rather than chained directly onto the row/column call. Same
+    // "fill the whole row/column" heuristic as resolveChainTarget, just with the item found by
+    // searching the lambda body instead of a receiver chain.
+    private fun resolveFactoryCall(node: UCallExpression, rows: Int, columns: Int): Pair<SlotTarget, UExpression>? {
+        val args = node.valueArguments
+        val (target, lambdaArg) = when (node.methodName) {
+            "row" -> if (args.size == 2) {
+                (args[0].evaluate() as? Int)?.let { rowIndices(it, rows, columns) }?.let { it to args[1] }
+            } else null
+            "firstRow" -> if (args.size == 1) rowIndices(1, rows, columns)?.let { it to args[0] } else null
+            "lastRow" -> if (args.size == 1) rowIndices(rows, rows, columns)?.let { it to args[0] } else null
+            "column" -> if (args.size == 2) {
+                (args[0].evaluate() as? Int)?.let { columnIndices(it, rows, columns) }?.let { it to args[1] }
+            } else null
+            "firstColumn" -> if (args.size == 1) columnIndices(1, rows, columns)?.let { it to args[0] } else null
+            "lastColumn" -> if (args.size == 1) columnIndices(columns, rows, columns)?.let { it to args[0] } else null
+            else -> null
+        } ?: return null
+
+        val lambda = lambdaArg as? ULambdaExpression ?: return null
+        val itemExpr = findWithItemArgumentInLambda(lambda) ?: return null
+        return target to itemExpr
+    }
+
+    private fun findWithItemArgumentInLambda(lambda: ULambdaExpression): UExpression? {
+        var found: UExpression? = null
+        lambda.body.accept(object : AbstractUastVisitor() {
+            override fun visitCallExpression(node: UCallExpression): Boolean {
+                if (found == null && node.methodName == "withItem" && node.valueArguments.size == 1) {
+                    found = node.valueArguments[0]
+                }
+                return found != null
+            }
+        })
+        return found
     }
 
     private fun resolveDirectItemCall(node: UCallExpression, rows: Int, columns: Int): Pair<SlotTarget, UExpression>? {
