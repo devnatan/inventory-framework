@@ -1,0 +1,18 @@
+<idea-plugin>
+    <id>me.devnatan.inventoryframework.intellij</id>
+    <name>Inventory Framework</name>
+    <vendor url="https://github.com/DevNatan/inventory-framework">DevNatan</vendor>
+
+    <description><![CDATA[
+        Live preview for inventory-framework views: open a View class or an inline Views.rows(...)
+        builder chain and see the resulting inventory grid rendered next to the source.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+    <depends optional="true" config-file="inventoryframework-kotlin.xml">org.jetbrains.kotlin</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileEditorProvider implementation="me.devnatan.inventoryframework.intellij.InventoryPreviewFileEditorProvider"/>
+    </extensions>
+</idea-plugin>
