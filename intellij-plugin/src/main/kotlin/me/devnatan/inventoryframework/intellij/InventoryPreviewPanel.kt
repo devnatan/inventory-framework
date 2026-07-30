@@ -34,7 +34,7 @@ private val chestSprites: Map<Int, BufferedImage?> by lazy {
 class InventoryPreviewPanel : JPanel() {
 
     private var model: PreviewModel? = null
-    private var highlightedSlotIndex: Int? = null
+    private var highlightedSlotIndices: Set<Int> = emptySet()
 
     var onSlotClicked: ((TextRange) -> Unit)? = null
 
@@ -51,15 +51,15 @@ class InventoryPreviewPanel : JPanel() {
 
     fun setModel(newModel: PreviewModel?) {
         model = newModel
-        highlightedSlotIndex = null
+        highlightedSlotIndices = emptySet()
         preferredSize = computePreferredSize(newModel)
         revalidate()
         repaint()
     }
 
-    fun setHighlightedSlot(index: Int?) {
-        if (highlightedSlotIndex == index) return
-        highlightedSlotIndex = index
+    fun setHighlightedSlots(indices: Set<Int>) {
+        if (highlightedSlotIndices == indices) return
+        highlightedSlotIndices = indices
         repaint()
     }
 
@@ -169,7 +169,7 @@ class InventoryPreviewPanel : JPanel() {
             slot?.material != null -> g.drawString(abbreviateMaterial(slot.material), x + 3, y + size - 4)
         }
 
-        if (index == highlightedSlotIndex) {
+        if (index in highlightedSlotIndices) {
             g.color = JBColor.BLUE
             g.drawRect(x, y, size - 1, size - 1)
             g.drawRect(x + 1, y + 1, size - 3, size - 3)

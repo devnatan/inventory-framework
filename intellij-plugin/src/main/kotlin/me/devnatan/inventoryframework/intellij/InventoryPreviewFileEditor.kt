@@ -72,10 +72,12 @@ class InventoryPreviewFileEditor(
 
     private fun updateHighlightForCaret() {
         val offset = textEditor.editor.caretModel.offset
-        val slotIndex = currentModel?.slots?.entries?.firstOrNull { (_, slot) ->
-            slot.sourceRange?.containsOffset(offset) == true
-        }?.key
-        panel.setHighlightedSlot(slotIndex)
+        val slotIndices = currentModel?.slots?.entries
+            ?.filter { (_, slot) -> slot.sourceRange?.containsOffset(offset) == true }
+            ?.map { it.key }
+            ?.toSet()
+            ?: emptySet()
+        panel.setHighlightedSlots(slotIndices)
     }
 
     private fun navigateToRange(range: TextRange) {
