@@ -14,5 +14,12 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <fileEditorProvider implementation="me.devnatan.inventoryframework.intellij.InventoryPreviewFileEditorProvider"/>
+        <localInspection
+            language=""
+            groupName="Inventory Framework"
+            enabledByDefault="true"
+            level="WARNING"
+            implementationClass="me.devnatan.inventoryframework.intellij.ExperimentalApiUsageInspection"
+            displayName="Usage of experimental or internal inventory-framework API"/>
     </extensions>
 </idea-plugin>
