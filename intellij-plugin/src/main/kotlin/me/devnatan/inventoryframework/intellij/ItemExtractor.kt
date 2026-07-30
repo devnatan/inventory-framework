@@ -70,8 +70,32 @@ object ItemExtractor {
             "firstSlot" -> SlotTarget.Indices(listOf(0))
             "lastSlot" -> SlotTarget.Indices(listOf(rows * columns - 1))
             "layoutSlot" -> (args.getOrNull(0)?.evaluate() as? Char)?.let { SlotTarget.Layout(it) }
+            // row()/column() and their first/last sugar actually return the "next available slot in
+            // that row/column" - not the whole row - but the idiomatic usage (see RowColumnSample) is
+            // to call them in a loop to fill the entire row/column, which we can't detect from a single
+            // call site without loop analysis. Treating each call as "fill the whole row/column" is
+            // wrong for genuine single-slot usage but renders the common case correctly instead of
+            // showing nothing at all.
+            "row" -> (args.getOrNull(0)?.evaluate() as? Int)?.let { rowIndices(it, rows, columns) }
+            "firstRow" -> rowIndices(1, rows, columns)
+            "lastRow" -> rowIndices(rows, rows, columns)
+            "column" -> (args.getOrNull(0)?.evaluate() as? Int)?.let { columnIndices(it, rows, columns) }
+            "firstColumn" -> columnIndices(1, rows, columns)
+            "lastColumn" -> columnIndices(columns, rows, columns)
             else -> null
         }
+    }
+
+    private fun rowIndices(row1Indexed: Int, rows: Int, columns: Int): SlotTarget.Indices? {
+        if (row1Indexed !in 1..rows) return null
+        val row0 = row1Indexed - 1
+        return SlotTarget.Indices((0 until columns).map { row0 * columns + it })
+    }
+
+    private fun columnIndices(column1Indexed: Int, rows: Int, columns: Int): SlotTarget.Indices? {
+        if (column1Indexed !in 1..columns) return null
+        val column0 = column1Indexed - 1
+        return SlotTarget.Indices((0 until rows).map { it * columns + column0 })
     }
 
     private fun resolveDirectItemCall(node: UCallExpression, rows: Int, columns: Int): Pair<SlotTarget, UExpression>? {
