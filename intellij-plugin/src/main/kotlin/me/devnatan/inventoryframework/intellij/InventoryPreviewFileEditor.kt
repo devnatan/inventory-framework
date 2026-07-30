@@ -5,16 +5,47 @@ import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiTreeChangeAdapter
+import com.intellij.psi.PsiTreeChangeEvent
+import com.intellij.util.Alarm
 import java.beans.PropertyChangeListener
 import java.beans.PropertyChangeSupport
 import javax.swing.JComponent
 
-class InventoryPreviewFileEditor(project: Project, private val file: VirtualFile) : UserDataHolderBase(), FileEditor {
+private const val REFRESH_DEBOUNCE_MILLIS = 300
 
-    private val panel = InventoryPreviewPanel().apply {
-        setModel(extractPreviewModel(project, file))
-    }
+class InventoryPreviewFileEditor(private val project: Project, private val file: VirtualFile) : UserDataHolderBase(), FileEditor {
+
+    private val panel = InventoryPreviewPanel()
     private val propertyChangeSupport = PropertyChangeSupport(this)
+    private val refreshAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
+
+    init {
+        refreshPreview()
+        PsiManager.getInstance(project).addPsiTreeChangeListener(
+            object : PsiTreeChangeAdapter() {
+                override fun childrenChanged(event: PsiTreeChangeEvent) {
+                    if (event.file?.virtualFile == file) scheduleRefresh()
+                }
+            },
+            this,
+        )
+    }
+
+    private fun scheduleRefresh() {
+        refreshAlarm.cancelAllRequests()
+        refreshAlarm.addRequest(::refreshPreview, REFRESH_DEBOUNCE_MILLIS)
+    }
+
+    private fun refreshPreview() {
+        val model = try {
+            extractPreviewModel(project, file)
+        } catch (e: Exception) {
+            null
+        }
+        panel.setModel(model)
+    }
 
     override fun getComponent(): JComponent = panel
 
