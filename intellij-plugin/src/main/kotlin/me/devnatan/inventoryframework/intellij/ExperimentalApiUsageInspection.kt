@@ -16,6 +16,22 @@ import org.jetbrains.uast.visitor.AbstractUastNonRecursiveVisitor
 private const val EXPERIMENTAL_FQN = "org.jetbrains.annotations.ApiStatus.Experimental"
 private const val INTERNAL_FQN = "org.jetbrains.annotations.ApiStatus.Internal"
 
+// Internal gets the ordinary yellow warning underline (you really shouldn't be calling this at
+// all); Experimental gets the lighter gray "weak warning" dotted underline (it works, just may
+// change), the same distinction IntelliJ itself uses for weaker suggestions vs real warnings.
+private enum class ApiStability(val highlightType: ProblemHighlightType, val suffix: String) {
+    EXPERIMENTAL(
+        ProblemHighlightType.WEAK_WARNING,
+        "is marked @ApiStatus.Experimental and may change or be removed without notice",
+    ),
+    INTERNAL(
+        ProblemHighlightType.GENERIC_ERROR_OR_WARNING,
+        "is marked @ApiStatus.Internal and is not intended for use outside its declaring module",
+    ),
+}
+
+private data class ApiStatusFinding(val stability: ApiStability, val message: String)
+
 class ExperimentalApiUsageInspection : LocalInspectionTool() {
 
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
@@ -39,25 +55,23 @@ class ExperimentalApiUsageInspection : LocalInspectionTool() {
 
     private fun reportIfUnstable(node: UElement, resolved: PsiElement?, holder: ProblemsHolder) {
         val owner = resolved as? PsiModifierListOwner ?: return
-        val message = apiStatusMessageFor(owner) ?: return
+        val finding = findApiStatus(owner) ?: return
         val sourcePsi = node.sourcePsi ?: return
-        holder.registerProblem(sourcePsi, message, ProblemHighlightType.LIKE_DEPRECATED)
+        holder.registerProblem(sourcePsi, finding.message, finding.stability.highlightType)
     }
 
     // Checks the resolved declaration's own annotations first, then falls back to its containing
     // class - inventory-framework marks whole classes like View/ViewBuilder @ApiStatus.Experimental
     // rather than every individual member.
-    private fun apiStatusMessageFor(owner: PsiModifierListOwner): String? {
-        apiStatusSuffix(owner)?.let { return "This API $it" }
+    private fun findApiStatus(owner: PsiModifierListOwner): ApiStatusFinding? {
+        apiStabilityOf(owner)?.let { return ApiStatusFinding(it, "This API ${it.suffix}") }
         val containingClass = (owner as? PsiMember)?.containingClass ?: return null
-        return apiStatusSuffix(containingClass)?.let { "This API's containing class $it" }
+        return apiStabilityOf(containingClass)?.let { ApiStatusFinding(it, "This API's containing class ${it.suffix}") }
     }
 
-    private fun apiStatusSuffix(owner: PsiModifierListOwner): String? = when {
-        owner.hasAnnotation(EXPERIMENTAL_FQN) ->
-            "is marked @ApiStatus.Experimental and may change or be removed without notice"
-        owner.hasAnnotation(INTERNAL_FQN) ->
-            "is marked @ApiStatus.Internal and is not intended for use outside its declaring module"
+    private fun apiStabilityOf(owner: PsiModifierListOwner): ApiStability? = when {
+        owner.hasAnnotation(EXPERIMENTAL_FQN) -> ApiStability.EXPERIMENTAL
+        owner.hasAnnotation(INTERNAL_FQN) -> ApiStability.INTERNAL
         else -> null
     }
 }
