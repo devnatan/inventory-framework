@@ -27,7 +27,7 @@ class InventoryPreviewPanel : JPanel() {
         val currentModel = model
         if (currentModel == null) {
             g.color = JBColor.foreground()
-            g.drawString("No inventory view detected", ORIGIN_X, 20)
+            g.drawString("Unable to analyze this view", ORIGIN_X, 20)
             return
         }
 
@@ -36,6 +36,7 @@ class InventoryPreviewPanel : JPanel() {
 
         for (row in 0 until currentModel.rows) {
             for (col in 0 until currentModel.columns) {
+                if (row * currentModel.columns + col >= currentModel.maxSize) continue
                 paintSlot(g, currentModel, row, col)
             }
         }
