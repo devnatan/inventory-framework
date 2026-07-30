@@ -16,8 +16,8 @@ import javax.swing.JPanel
 
 private const val SLOT_SIZE = 32
 private const val SLOT_GAP = 2
-private const val ORIGIN_X = 12
-private const val ORIGIN_Y = 36
+private const val MIN_MARGIN = 12
+private const val TITLE_GRID_GAP = 16
 
 private const val CHEST_TYPE_NAME = "CHEST"
 private const val SPRITE_SCALE = 2
@@ -68,15 +68,22 @@ class InventoryPreviewPanel : JPanel() {
         val currentModel = model
         if (currentModel == null) {
             g.color = JBColor.foreground()
-            g.drawString("Unable to analyze this view", ORIGIN_X, 20)
+            g.drawString("Unable to analyze this view", MIN_MARGIN, 20)
             return
         }
 
+        val (originX, originY) = gridOrigin(currentModel)
+        val title = currentModel.title ?: "(dynamic title)"
+        val gridWidth = gridContentSize(currentModel).width
         g.color = JBColor.foreground()
-        g.drawString(currentModel.title ?: "(dynamic title)", ORIGIN_X, 20)
+        g.drawString(title, originX + (gridWidth - g.fontMetrics.stringWidth(title)) / 2, originY - 4)
 
         val sprite = chestSpriteFor(currentModel)
-        if (sprite != null) paintSpriteGrid(g, currentModel, sprite) else paintDrawnGrid(g, currentModel)
+        if (sprite != null) {
+            paintSpriteGrid(g, currentModel, sprite, originX, originY)
+        } else {
+            paintDrawnGrid(g, currentModel, originX, originY)
+        }
     }
 
     private fun chestSpriteFor(model: PreviewModel): BufferedImage? {
@@ -84,31 +91,51 @@ class InventoryPreviewPanel : JPanel() {
         return chestSprites[model.rows.coerceIn(1, 6)]
     }
 
-    // Shared by painting and click hit-testing so the two can never drift apart.
-    private fun slotGeometry(model: PreviewModel): Triple<Int, Int, Int> {
+    private fun gridContentSize(model: PreviewModel): Dimension {
         val sprite = chestSpriteFor(model)
         return if (sprite != null) {
-            Triple(ORIGIN_X + SPRITE_ORIGIN_X * SPRITE_SCALE, ORIGIN_Y + SPRITE_ORIGIN_Y * SPRITE_SCALE, SPRITE_SLOT_SIZE * SPRITE_SCALE)
+            Dimension(sprite.width * SPRITE_SCALE, sprite.height * SPRITE_SCALE)
         } else {
-            Triple(ORIGIN_X, ORIGIN_Y, SLOT_SIZE + SLOT_GAP)
+            Dimension(model.columns * (SLOT_SIZE + SLOT_GAP), model.rows * (SLOT_SIZE + SLOT_GAP))
+        }
+    }
+
+    // Centers the grid within whatever space is currently available, falling back to a fixed
+    // margin when the panel is smaller than the content. Recomputed from the panel's live
+    // width/height on every call (paint and click hit-testing alike) so they can never drift apart.
+    private fun gridOrigin(model: PreviewModel): Pair<Int, Int> {
+        val size = gridContentSize(model)
+        val x = maxOf(MIN_MARGIN, (width - size.width) / 2)
+        val y = maxOf(MIN_MARGIN + TITLE_GRID_GAP, (height - size.height) / 2)
+        return x to y
+    }
+
+    // Shared by painting and click hit-testing so the two can never drift apart.
+    private fun slotGeometry(model: PreviewModel, originX: Int, originY: Int): Triple<Int, Int, Int> {
+        val sprite = chestSpriteFor(model)
+        return if (sprite != null) {
+            Triple(originX + SPRITE_ORIGIN_X * SPRITE_SCALE, originY + SPRITE_ORIGIN_Y * SPRITE_SCALE, SPRITE_SLOT_SIZE * SPRITE_SCALE)
+        } else {
+            Triple(originX, originY, SLOT_SIZE + SLOT_GAP)
         }
     }
 
     private fun slotIndexAt(model: PreviewModel, point: Point): Int? {
-        val (originX, originY, slotSize) = slotGeometry(model)
-        val col = (point.x - originX) / slotSize
-        val row = (point.y - originY) / slotSize
-        if (point.x < originX || point.y < originY) return null
+        val (originX, originY) = gridOrigin(model)
+        val (slotOriginX, slotOriginY, slotSize) = slotGeometry(model, originX, originY)
+        if (point.x < slotOriginX || point.y < slotOriginY) return null
+        val col = (point.x - slotOriginX) / slotSize
+        val row = (point.y - slotOriginY) / slotSize
         if (col !in 0 until model.columns || row !in 0 until model.rows) return null
         val index = row * model.columns + col
         return index.takeIf { it < model.maxSize }
     }
 
-    private fun paintSpriteGrid(g: Graphics, model: PreviewModel, sprite: BufferedImage) {
+    private fun paintSpriteGrid(g: Graphics, model: PreviewModel, sprite: BufferedImage, originX: Int, originY: Int) {
         (g as Graphics2D).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
-        g.drawImage(sprite, ORIGIN_X, ORIGIN_Y, sprite.width * SPRITE_SCALE, sprite.height * SPRITE_SCALE, null)
+        g.drawImage(sprite, originX, originY, sprite.width * SPRITE_SCALE, sprite.height * SPRITE_SCALE, null)
 
-        val (slotOriginX, slotOriginY, slotSize) = slotGeometry(model)
+        val (slotOriginX, slotOriginY, slotSize) = slotGeometry(model, originX, originY)
         forEachSlot(model) { row, col ->
             val x = slotOriginX + col * slotSize
             val y = slotOriginY + row * slotSize
@@ -116,11 +143,11 @@ class InventoryPreviewPanel : JPanel() {
         }
     }
 
-    private fun paintDrawnGrid(g: Graphics, model: PreviewModel) {
-        val (originX, originY, slotSize) = slotGeometry(model)
+    private fun paintDrawnGrid(g: Graphics, model: PreviewModel, originX: Int, originY: Int) {
+        val (slotOriginX, slotOriginY, slotSize) = slotGeometry(model, originX, originY)
         forEachSlot(model) { row, col ->
-            val x = originX + col * slotSize
-            val y = originY + row * slotSize
+            val x = slotOriginX + col * slotSize
+            val y = slotOriginY + row * slotSize
             paintSlotOverlay(g, model, row, col, x, y, SLOT_SIZE, paintEmptyBackground = true)
         }
     }
@@ -178,15 +205,8 @@ class InventoryPreviewPanel : JPanel() {
 
     private fun computePreferredSize(forModel: PreviewModel?): Dimension {
         if (forModel == null) return Dimension(240, 100)
-
-        val sprite = chestSpriteFor(forModel)
-        if (sprite != null) {
-            return Dimension(ORIGIN_X * 2 + sprite.width * SPRITE_SCALE, ORIGIN_Y + sprite.height * SPRITE_SCALE)
-        }
-        return Dimension(
-            ORIGIN_X * 2 + forModel.columns * (SLOT_SIZE + SLOT_GAP),
-            ORIGIN_Y + forModel.rows * (SLOT_SIZE + SLOT_GAP),
-        )
+        val size = gridContentSize(forModel)
+        return Dimension(MIN_MARGIN * 2 + size.width, MIN_MARGIN + TITLE_GRID_GAP + size.height)
     }
 
     private fun colorForMaterial(material: String): Color {
