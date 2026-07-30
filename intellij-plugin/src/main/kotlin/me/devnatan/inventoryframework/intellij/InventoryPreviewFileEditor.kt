@@ -2,6 +2,7 @@ package me.devnatan.inventoryframework.intellij
 
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
@@ -22,7 +23,10 @@ class InventoryPreviewFileEditor(private val project: Project, private val file:
     private val refreshAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
 
     init {
-        refreshPreview()
+        // The editor can be reconstructed (e.g. restoring last-open tabs on startup) while the
+        // project is still indexing; retry once smart mode is reached instead of caching a
+        // permanent extraction failure from that race.
+        DumbService.getInstance(project).runWhenSmart(::refreshPreview)
         PsiManager.getInstance(project).addPsiTreeChangeListener(
             object : PsiTreeChangeAdapter() {
                 override fun childrenChanged(event: PsiTreeChangeEvent) {
