@@ -21,5 +21,5 @@ class InventoryPreviewFileEditorProvider : FileEditorProvider {
 
     override fun getEditorTypeId(): String = "inventoryframework-preview"
 
-    override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.PLACE_AFTER_DEFAULT_EDITOR
+    override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }

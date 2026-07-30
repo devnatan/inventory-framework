@@ -1,5 +1,7 @@
 package me.devnatan.inventoryframework.intellij
 
+import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
@@ -16,10 +18,17 @@ private val VIEWS_ENTRY_POINT_METHODS = setOf("rows", "type", "builder")
 object ViewDetector {
 
     fun isViewFile(project: Project, file: VirtualFile): Boolean {
-        val psiFile = PsiManager.getInstance(project).findFile(file) ?: return false
-        val uFile = psiFile.toUElementOfType<UFile>() ?: return false
-        return uFile.classes.any { InheritanceUtil.isInheritor(it, VIEW_FQN) } ||
-            containsInlineViewsEntryPoint(uFile)
+        // InheritanceUtil/method resolution below hit the stub index, which throws
+        // IndexNotReadyException while the project is still indexing (dumb mode).
+        if (DumbService.isDumb(project)) return false
+
+        return try {
+            val psiFile = PsiManager.getInstance(project).findFile(file) ?: return false
+            val uFile = psiFile.toUElementOfType<UFile>() ?: return false
+            uFile.classes.any { InheritanceUtil.isInheritor(it, VIEW_FQN) } || containsInlineViewsEntryPoint(uFile)
+        } catch (e: IndexNotReadyException) {
+            false
+        }
     }
 
     private fun containsInlineViewsEntryPoint(uFile: UFile): Boolean {
