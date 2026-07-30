@@ -16,10 +16,6 @@ import org.jetbrains.uast.visitor.AbstractUastNonRecursiveVisitor
 private const val EXPERIMENTAL_FQN = "org.jetbrains.annotations.ApiStatus.Experimental"
 private const val INTERNAL_FQN = "org.jetbrains.annotations.ApiStatus.Internal"
 
-// Internal gets GENERIC_ERROR (you really shouldn't be calling this at all); Experimental gets
-// the lighter WEAK_WARNING dotted underline (it works, just may change). registerProblem only
-// accepts the built-in ProblemHighlightType values, so a fully custom color would need an
-// Annotator instead - these two were chosen empirically to look distinct enough from each other.
 private enum class ApiStability(val highlightType: ProblemHighlightType, val suffix: String) {
     EXPERIMENTAL(
         ProblemHighlightType.WEAK_WARNING,
