@@ -15,7 +15,7 @@ class InventoryPreviewFileEditorProvider : FileEditorProvider {
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
         val textEditor = TextEditorProvider.getInstance().createEditor(project, file) as TextEditor
-        val previewEditor = InventoryPreviewFileEditor(file)
+        val previewEditor = InventoryPreviewFileEditor(project, file)
         return TextEditorWithPreview(textEditor, previewEditor, "Inventory Preview")
     }
 
