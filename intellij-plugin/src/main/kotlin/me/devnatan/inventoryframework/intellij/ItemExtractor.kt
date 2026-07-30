@@ -1,0 +1,122 @@
+package me.devnatan.inventoryframework.intellij
+
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiField
+import org.jetbrains.uast.UCallExpression
+import org.jetbrains.uast.UExpression
+import org.jetbrains.uast.UFile
+import org.jetbrains.uast.ULiteralExpression
+import org.jetbrains.uast.UReferenceExpression
+import org.jetbrains.uast.UVariable
+import org.jetbrains.uast.UastCallKind
+import org.jetbrains.uast.toUElementOfType
+import org.jetbrains.uast.visitor.AbstractUastVisitor
+
+private const val ITEM_STACK_FQN = "org.bukkit.inventory.ItemStack"
+private const val MATERIAL_FQN = "org.bukkit.Material"
+private const val FRAMEWORK_PACKAGE_PREFIX = "me.devnatan.inventoryframework"
+private val ITEM_BINDING_METHODS = setOf("withItem", "renderWith", "onRender")
+
+private sealed class SlotTarget {
+    data class Indices(val slots: List<Int>) : SlotTarget()
+    data class Layout(val character: Char) : SlotTarget()
+}
+
+class ItemExtractionResult(val indexedSlots: Map<Int, PreviewSlot>, val layoutBindings: Map<Char, PreviewSlot>)
+
+object ItemExtractor {
+
+    fun extract(uFile: UFile, rows: Int, columns: Int): ItemExtractionResult {
+        val indexedSlots = mutableMapOf<Int, PreviewSlot>()
+        val layoutBindings = mutableMapOf<Char, PreviewSlot>()
+
+        fun apply(target: SlotTarget, slot: PreviewSlot?) {
+            if (slot == null) return
+            when (target) {
+                is SlotTarget.Indices -> target.slots.forEach { indexedSlots[it] = slot }
+                is SlotTarget.Layout -> layoutBindings[target.character] = slot
+            }
+        }
+
+        uFile.accept(object : AbstractUastVisitor() {
+            override fun visitCallExpression(node: UCallExpression): Boolean {
+                val method = node.resolve() ?: return false
+                val declaringClass = method.containingClass?.qualifiedName
+                if (declaringClass == null || !declaringClass.startsWith(FRAMEWORK_PACKAGE_PREFIX)) return false
+
+                val methodName = node.methodName
+                if (methodName in ITEM_BINDING_METHODS && node.valueArguments.size == 1) {
+                    val receiverCall = node.receiver as? UCallExpression ?: return false
+                    val target = resolveChainTarget(receiverCall, rows, columns) ?: return false
+                    val slot = if (methodName == "withItem") resolveItem(node.valueArguments[0]) else PreviewSlot(null, dynamic = true)
+                    apply(target, slot)
+                    return false
+                }
+
+                resolveDirectItemCall(node, rows, columns)?.let { (target, itemExpr) ->
+                    apply(target, resolveItem(itemExpr))
+                }
+                return false
+            }
+        })
+
+        return ItemExtractionResult(indexedSlots, layoutBindings)
+    }
+
+    private fun resolveChainTarget(call: UCallExpression, rows: Int, columns: Int): SlotTarget? {
+        val args = call.valueArguments
+        return when (call.methodName) {
+            "slot" -> (args.getOrNull(0)?.evaluate() as? Int)?.let { SlotTarget.Indices(listOf(it)) }
+            "firstSlot" -> SlotTarget.Indices(listOf(0))
+            "lastSlot" -> SlotTarget.Indices(listOf(rows * columns - 1))
+            "layoutSlot" -> (args.getOrNull(0)?.evaluate() as? Char)?.let { SlotTarget.Layout(it) }
+            else -> null
+        }
+    }
+
+    private fun resolveDirectItemCall(node: UCallExpression, rows: Int, columns: Int): Pair<SlotTarget, UExpression>? {
+        val args = node.valueArguments
+        return when (node.methodName) {
+            "slot" -> if (args.size == 2) {
+                val index = args[0].evaluate() as? Int ?: return null
+                SlotTarget.Indices(listOf(index)) to args[1]
+            } else null
+            "firstSlot" -> if (args.size == 1) SlotTarget.Indices(listOf(0)) to args[0] else null
+            "lastSlot" -> if (args.size == 1) SlotTarget.Indices(listOf(rows * columns - 1)) to args[0] else null
+            "layoutSlot" -> if (args.size == 2) {
+                val ch = args[0].evaluate() as? Char ?: return null
+                SlotTarget.Layout(ch) to args[1]
+            } else null
+            else -> null
+        }
+    }
+
+    private fun resolveItem(expr: UExpression?): PreviewSlot? {
+        if (expr == null || isNullLiteral(expr)) return null
+        val material = findItemStackConstructorCall(expr)?.let { extractMaterialName(it) }
+        return PreviewSlot(material = material, dynamic = material == null)
+    }
+
+    private fun isNullLiteral(expr: UExpression): Boolean = (expr as? ULiteralExpression)?.isNull == true
+
+    private fun findItemStackConstructorCall(expr: UExpression): UCallExpression? {
+        val direct = expr as? UCallExpression
+        if (direct != null) {
+            if (direct.kind != UastCallKind.CONSTRUCTOR_CALL) return null
+            val constructedClass = direct.classReference?.resolve() as? PsiClass ?: return null
+            return if (constructedClass.qualifiedName == ITEM_STACK_FQN) direct else null
+        }
+
+        val ref = expr as? UReferenceExpression ?: return null
+        val variable = ref.resolve()?.toUElementOfType<UVariable>() ?: return null
+        val initializer = variable.uastInitializer ?: return null
+        return findItemStackConstructorCall(initializer)
+    }
+
+    private fun extractMaterialName(constructorCall: UCallExpression): String? {
+        val field = (constructorCall.valueArguments.getOrNull(0) as? UReferenceExpression)?.resolve() as? PsiField
+            ?: return null
+        if (field.containingClass?.qualifiedName != MATERIAL_FQN) return null
+        return field.name
+    }
+}
