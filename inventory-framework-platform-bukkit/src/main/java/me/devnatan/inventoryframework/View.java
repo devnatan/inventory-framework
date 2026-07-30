@@ -1,5 +1,6 @@
 package me.devnatan.inventoryframework;
 
+import java.util.Collections;
 import me.devnatan.inventoryframework.component.BukkitItemComponentBuilder;
 import me.devnatan.inventoryframework.context.CloseContext;
 import me.devnatan.inventoryframework.context.Context;
@@ -50,5 +51,36 @@ public class View
     @Override
     public final void nextTick(Runnable task) {
         Bukkit.getServer().getScheduler().runTask(getFramework().getOwner(), task);
+    }
+
+    /**
+     * Opens this view instance directly to a player.
+     * <p>
+     * Unlike {@link ViewFrame#open(Class, Player)}, this does not require the view to be looked up
+     * by its class, so it works for views built with the inline builder API as well as regular
+     * class-based views.
+     *
+     * @param player The player that'll see this view.
+     * @return The id of the newly created context.
+     */
+    @ApiStatus.Experimental
+    public final String open(@NotNull Player player) {
+        return open(player, null);
+    }
+
+    /**
+     * Opens this view instance directly to a player with initial data.
+     * <p>
+     * Unlike {@link ViewFrame#open(Class, Player, Object)}, this does not require the view to be
+     * looked up by its class, so it works for views built with the inline builder API as well as
+     * regular class-based views.
+     *
+     * @param player      The player that'll see this view.
+     * @param initialData The initial data.
+     * @return The id of the newly created context.
+     */
+    @ApiStatus.Experimental
+    public final String open(@NotNull Player player, Object initialData) {
+        return open(Collections.singletonList(getElementFactory().createViewer(player, null)), initialData);
     }
 }
