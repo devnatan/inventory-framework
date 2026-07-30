@@ -10,6 +10,7 @@ import org.jetbrains.uast.ULiteralExpression
 import org.jetbrains.uast.UReferenceExpression
 import org.jetbrains.uast.UVariable
 import org.jetbrains.uast.UastCallKind
+import org.jetbrains.uast.skipParenthesizedExprDown
 import org.jetbrains.uast.toUElementOfType
 import org.jetbrains.uast.visitor.AbstractUastVisitor
 
@@ -48,7 +49,7 @@ object ItemExtractor {
 
                 val methodName = node.methodName
                 if (methodName in ITEM_BINDING_METHODS && node.valueArguments.size == 1) {
-                    val receiverCall = node.receiver as? UCallExpression ?: return false
+                    val receiverCall = node.receiver?.skipParenthesizedExprDown() as? UCallExpression ?: return false
                     val target = resolveChainTarget(receiverCall, rows, columns) ?: return false
                     val slot = if (methodName == "withItem") resolveItem(node.valueArguments[0]) else PreviewSlot(null, dynamic = true)
                     apply(target, slot)
@@ -128,7 +129,7 @@ object ItemExtractor {
             else -> null
         } ?: return null
 
-        val lambda = lambdaArg as? ULambdaExpression ?: return null
+        val lambda = lambdaArg.skipParenthesizedExprDown() as? ULambdaExpression ?: return null
         val itemExpr = findWithItemArgumentInLambda(lambda) ?: return null
         return target to itemExpr
     }
@@ -163,15 +164,18 @@ object ItemExtractor {
         }
     }
 
-    private fun resolveItem(expr: UExpression?): PreviewSlot? {
-        if (expr == null || isNullLiteral(expr)) return null
+    private fun resolveItem(rawExpr: UExpression?): PreviewSlot? {
+        if (rawExpr == null) return null
+        val expr = rawExpr.skipParenthesizedExprDown()
+        if (isNullLiteral(expr)) return null
         val material = findItemStackConstructorCall(expr)?.let { extractMaterialName(it) }
         return PreviewSlot(material = material, dynamic = material == null)
     }
 
     private fun isNullLiteral(expr: UExpression): Boolean = (expr as? ULiteralExpression)?.isNull == true
 
-    private fun findItemStackConstructorCall(expr: UExpression): UCallExpression? {
+    private fun findItemStackConstructorCall(rawExpr: UExpression): UCallExpression? {
+        val expr = rawExpr.skipParenthesizedExprDown()
         val direct = expr as? UCallExpression
         if (direct != null) {
             if (direct.kind != UastCallKind.CONSTRUCTOR_CALL) return null

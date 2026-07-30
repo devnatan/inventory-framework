@@ -6,6 +6,7 @@ import org.jetbrains.uast.UExpression
 import org.jetbrains.uast.UFile
 import org.jetbrains.uast.UReferenceExpression
 import org.jetbrains.uast.evaluateString
+import org.jetbrains.uast.skipParenthesizedExprDown
 import org.jetbrains.uast.visitor.AbstractUastVisitor
 
 private const val VIEW_TYPE_FQN = "me.devnatan.inventoryframework.ViewType"
@@ -86,7 +87,8 @@ object ViewExtractor {
     }
 
     private fun resolveViewTypeFieldName(arg: UExpression?): String? {
-        val field = (arg as? UReferenceExpression)?.resolve() as? PsiField ?: return null
+        val field = (arg?.skipParenthesizedExprDown() as? UReferenceExpression)?.resolve() as? PsiField
+            ?: return null
         if (field.containingClass?.qualifiedName != VIEW_TYPE_FQN) return null
         return field.name
     }
