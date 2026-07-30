@@ -45,7 +45,17 @@ public final class ViewConfigBuilder {
      * @return This config.
      */
     public ViewConfigBuilder inheritFrom(@NotNull ViewConfigBuilder other) {
-        throw new UnsupportedOperationException("Inheritance is not yet supported");
+        if (other.title != null) this.title = other.title;
+        if (other.size != 0) this.size = other.size;
+        if (other.type != null) this.type = other.type;
+        if (other.layout != null) this.layout = other.layout;
+        if (other.updateIntervalInTicks != 0) this.updateIntervalInTicks = other.updateIntervalInTicks;
+        if (other.updateIntervalState != null) this.updateIntervalState = other.updateIntervalState;
+        if (other.interactionDelayInMillis != 0) this.interactionDelayInMillis = other.interactionDelayInMillis;
+        if (other.transitiveInitialData) this.transitiveInitialData = true;
+        this.options.addAll(other.options);
+        this.modifiers.addAll(other.modifiers);
+        return this;
     }
 
     /**
