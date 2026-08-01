@@ -33,7 +33,6 @@ import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
 import java.awt.datatransfer.UnsupportedFlavorException
-import java.awt.image.BufferedImage
 import java.beans.PropertyChangeListener
 import java.beans.PropertyChangeSupport
 import javax.swing.JComponent
@@ -168,21 +167,16 @@ class InventoryPreviewFileEditor(
         group.addSeparator()
         group.add(object : AnAction("Copy as Image", "Copy the current preview render to the clipboard", AllIcons.Actions.Copy) {
             override fun actionPerformed(e: AnActionEvent) = copyPreviewAsImage(e)
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = panel.hasModel()
+            }
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
         })
         return group
     }
 
     private fun copyPreviewAsImage(e: AnActionEvent) {
-        val width = panel.width.coerceAtLeast(1)
-        val height = panel.height.coerceAtLeast(1)
-        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
-        val graphics = image.createGraphics()
-        try {
-            panel.paint(graphics)
-        } finally {
-            graphics.dispose()
-        }
+        val image = panel.renderContentImage() ?: return
         Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageTransferable(image), null)
 
         val anchor = e.inputEvent?.component as? JComponent ?: panel

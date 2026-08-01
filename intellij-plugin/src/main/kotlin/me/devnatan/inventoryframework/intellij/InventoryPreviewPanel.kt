@@ -110,6 +110,8 @@ class InventoryPreviewPanel : JPanel() {
         repaint()
     }
 
+    fun hasModel(): Boolean = model != null
+
     fun setHighlightedSlots(indices: Set<Int>) {
         if (highlightedSlotIndices == indices) return
         highlightedSlotIndices = indices
@@ -202,18 +204,32 @@ class InventoryPreviewPanel : JPanel() {
     // Centers the grid within whatever space is currently available, falling back to a fixed
     // margin when the panel is smaller than the content. Recomputed from the panel's live
     // width/height on every call (paint and click hit-testing alike) so they can never drift apart.
-    // The sprite frame already reserves room for the title in its own texture, so only the
-    // frame-less fallback needs the extra top gap.
     private fun gridOrigin(model: PreviewModel): Pair<Int, Int> {
         val size = gridContentSize(model)
-        val topReserve = if (chestSpriteFor(model) != null) MIN_MARGIN else nonSpriteTopReserve()
+        val (marginX, marginY) = logicalOrigin(model)
         // width/height are actual on-screen pixels, already inflated by zoom (see
         // computePreferredSize); divide back down since painting happens in a scaled transform.
         val logicalWidth = (width / zoom).toInt()
         val logicalHeight = (height / zoom).toInt()
-        val x = maxOf(MIN_MARGIN, (logicalWidth - size.width) / 2)
-        val y = maxOf(topReserve, (logicalHeight - size.height) / 2)
+        val x = maxOf(marginX, (logicalWidth - size.width) / 2)
+        val y = maxOf(marginY, (logicalHeight - size.height) / 2)
         return x to y
+    }
+
+    // The top-left corner the grid/title would sit at with no extra space to center within,
+    // i.e. the tight bounds used for a cropped export. The sprite frame already reserves room
+    // for the title in its own texture, so only the frame-less fallback needs the extra top gap.
+    private fun logicalOrigin(model: PreviewModel): Pair<Int, Int> {
+        val topReserve = if (chestSpriteFor(model) != null) MIN_MARGIN else nonSpriteTopReserve()
+        return MIN_MARGIN to topReserve
+    }
+
+    // The panel's content size at zoom = 1, with no viewport slack included. Used both to size
+    // the component's preferred size (scaled by zoom) and to size a tightly-cropped export.
+    private fun logicalContentSize(model: PreviewModel): Dimension {
+        val size = gridContentSize(model)
+        val (_, topReserve) = logicalOrigin(model)
+        return Dimension(MIN_MARGIN * 2 + size.width, topReserve + size.height)
     }
 
     // Sized from the title font's real ascent/descent rather than a guessed constant, so the
@@ -330,11 +346,32 @@ class InventoryPreviewPanel : JPanel() {
 
     private fun computePreferredSize(forModel: PreviewModel?): Dimension {
         if (forModel == null) return Dimension(240, 100)
-        val size = gridContentSize(forModel)
-        val topReserve = if (chestSpriteFor(forModel) != null) MIN_MARGIN else nonSpriteTopReserve()
-        val logicalWidth = MIN_MARGIN * 2 + size.width
-        val logicalHeight = topReserve + size.height
-        return Dimension((logicalWidth * zoom).toInt(), (logicalHeight * zoom).toInt())
+        val logical = logicalContentSize(forModel)
+        return Dimension((logical.width * zoom).toInt(), (logical.height * zoom).toInt())
+    }
+
+    // Renders just the title + grid, cropped tightly to their content and with a fully
+    // transparent background, for exporting (e.g. "copy as image") independent of the current
+    // on-screen zoom or however much extra viewport space the panel happens to occupy.
+    fun renderContentImage(): BufferedImage? {
+        val currentModel = model ?: return null
+        val size = logicalContentSize(currentModel)
+        val image = BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+            val (originX, originY) = logicalOrigin(currentModel)
+            val sprite = chestSpriteFor(currentModel)
+            if (sprite != null) {
+                paintSpriteGrid(g, currentModel, sprite, originX, originY)
+            } else {
+                paintDrawnGrid(g, currentModel, originX, originY)
+            }
+            paintTitle(g, currentModel, originX, originY)
+        } finally {
+            g.dispose()
+        }
+        return image
     }
 
     private fun colorForMaterial(material: String): Color {
