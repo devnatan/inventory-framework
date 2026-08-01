@@ -1,5 +1,12 @@
 package me.devnatan.inventoryframework.intellij
 
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
@@ -14,12 +21,16 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiTreeChangeAdapter
 import com.intellij.psi.PsiTreeChangeEvent
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Alarm
+import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import java.beans.PropertyChangeSupport
 import javax.swing.JComponent
+import javax.swing.JPanel
 
 private const val REFRESH_DEBOUNCE_MILLIS = 300
+private const val TOOLBAR_PLACE = "InventoryFramework.PreviewToolbar"
 
 class InventoryPreviewFileEditor(
     private val project: Project,
@@ -31,6 +42,7 @@ class InventoryPreviewFileEditor(
     private val propertyChangeSupport = PropertyChangeSupport(this)
     private val refreshAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
     private var currentModel: PreviewModel? = null
+    private val rootComponent: JComponent by lazy { buildComponent() }
 
     init {
         panel.onSlotClicked = ::navigateToRange
@@ -87,7 +99,47 @@ class InventoryPreviewFileEditor(
         editor.contentComponent.requestFocusInWindow()
     }
 
-    override fun getComponent(): JComponent = panel
+    private fun buildComponent(): JComponent {
+        val toolbar = ActionManager.getInstance().createActionToolbar(TOOLBAR_PLACE, createToolbarActions(), true)
+        val wrapper = JPanel(BorderLayout())
+        toolbar.targetComponent = wrapper
+        wrapper.add(toolbar.component, BorderLayout.NORTH)
+        wrapper.add(JBScrollPane(panel), BorderLayout.CENTER)
+        return wrapper
+    }
+
+    private fun createToolbarActions(): DefaultActionGroup {
+        val group = DefaultActionGroup()
+        group.add(object : AnAction("Zoom In", "Increase preview zoom", AllIcons.General.ZoomIn) {
+            override fun actionPerformed(e: AnActionEvent) = panel.zoomIn()
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = panel.canZoomIn()
+            }
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
+        group.add(object : AnAction("Zoom Out", "Decrease preview zoom", AllIcons.General.ZoomOut) {
+            override fun actionPerformed(e: AnActionEvent) = panel.zoomOut()
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = panel.canZoomOut()
+            }
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
+        group.add(object : AnAction("Reset Zoom", "Reset preview zoom to 100%", AllIcons.General.ActualZoom) {
+            override fun actionPerformed(e: AnActionEvent) = panel.resetZoom()
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
+        group.addSeparator()
+        group.add(object : ToggleAction("Show Slot Numbers", "Toggle the slot index overlay", AllIcons.General.InlineVariables) {
+            override fun isSelected(e: AnActionEvent) = panel.showSlotNumbers
+            override fun setSelected(e: AnActionEvent, state: Boolean) {
+                panel.showSlotNumbers = state
+            }
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
+        return group
+    }
+
+    override fun getComponent(): JComponent = rootComponent
 
     override fun getPreferredFocusedComponent(): JComponent = panel
 

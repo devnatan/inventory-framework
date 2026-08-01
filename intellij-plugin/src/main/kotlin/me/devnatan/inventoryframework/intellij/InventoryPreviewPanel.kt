@@ -42,6 +42,12 @@ private const val TITLE_FONT_SIZE = BASE_TITLE_FONT_SIZE * SPRITE_SCALE
 // any theme, since it's part of the emulated game screen rather than IDE chrome.
 private val TITLE_COLOR = Color(0x40, 0x40, 0x40)
 
+private val ZOOM_LEVELS = listOf(0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0)
+private val DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.indexOf(1.0)
+
+private val SLOT_NUMBER_FONT = Font(Font.MONOSPACED, Font.PLAIN, 9)
+private val SLOT_NUMBER_BACKGROUND = Color(0, 0, 0, 170)
+
 private val chestSprites: Map<Int, BufferedImage?> by lazy {
     (1..6).associateWith { rows ->
         InventoryPreviewPanel::class.java.getResourceAsStream("/assets/sprites/chest-$rows.png")?.use(ImageIO::read)
@@ -62,14 +68,24 @@ class InventoryPreviewPanel : JPanel() {
 
     private var model: PreviewModel? = null
     private var highlightedSlotIndices: Set<Int> = emptySet()
+    private var zoomIndex = DEFAULT_ZOOM_INDEX
+    private val zoom: Double get() = ZOOM_LEVELS[zoomIndex]
 
     var onSlotClicked: ((TextRange) -> Unit)? = null
+
+    var showSlotNumbers: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            repaint()
+        }
 
     init {
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 val currentModel = model ?: return
-                val index = slotIndexAt(currentModel, e.point) ?: return
+                val logicalPoint = Point((e.x / zoom).toInt(), (e.y / zoom).toInt())
+                val index = slotIndexAt(currentModel, logicalPoint) ?: return
                 val range = currentModel.slots[index]?.sourceRange ?: return
                 onSlotClicked?.invoke(range)
             }
@@ -79,8 +95,7 @@ class InventoryPreviewPanel : JPanel() {
     fun setModel(newModel: PreviewModel?) {
         model = newModel
         highlightedSlotIndices = emptySet()
-        preferredSize = computePreferredSize(newModel)
-        revalidate()
+        refreshSize()
         repaint()
     }
 
@@ -90,9 +105,42 @@ class InventoryPreviewPanel : JPanel() {
         repaint()
     }
 
+    fun canZoomIn(): Boolean = zoomIndex < ZOOM_LEVELS.lastIndex
+
+    fun canZoomOut(): Boolean = zoomIndex > 0
+
+    fun zoomIn() {
+        if (!canZoomIn()) return
+        zoomIndex++
+        onZoomChanged()
+    }
+
+    fun zoomOut() {
+        if (!canZoomOut()) return
+        zoomIndex--
+        onZoomChanged()
+    }
+
+    fun resetZoom() {
+        if (zoomIndex == DEFAULT_ZOOM_INDEX) return
+        zoomIndex = DEFAULT_ZOOM_INDEX
+        onZoomChanged()
+    }
+
+    private fun onZoomChanged() {
+        refreshSize()
+        repaint()
+    }
+
+    private fun refreshSize() {
+        preferredSize = computePreferredSize(model)
+        revalidate()
+    }
+
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         (g as Graphics2D).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+        g.scale(zoom, zoom)
         val currentModel = model
         if (currentModel == null) {
             g.color = JBColor.foreground()
@@ -148,8 +196,12 @@ class InventoryPreviewPanel : JPanel() {
     private fun gridOrigin(model: PreviewModel): Pair<Int, Int> {
         val size = gridContentSize(model)
         val topReserve = if (chestSpriteFor(model) != null) MIN_MARGIN else nonSpriteTopReserve()
-        val x = maxOf(MIN_MARGIN, (width - size.width) / 2)
-        val y = maxOf(topReserve, (height - size.height) / 2)
+        // width/height are actual on-screen pixels, already inflated by zoom (see
+        // computePreferredSize); divide back down since painting happens in a scaled transform.
+        val logicalWidth = (width / zoom).toInt()
+        val logicalHeight = (height / zoom).toInt()
+        val x = maxOf(MIN_MARGIN, (logicalWidth - size.width) / 2)
+        val y = maxOf(topReserve, (logicalHeight - size.height) / 2)
         return x to y
     }
 
@@ -251,13 +303,27 @@ class InventoryPreviewPanel : JPanel() {
             g.drawRect(x, y, size - 1, size - 1)
             g.drawRect(x + 1, y + 1, size - 3, size - 3)
         }
+
+        if (showSlotNumbers) {
+            val label = index.toString()
+            val originalFont = g.font
+            g.font = SLOT_NUMBER_FONT
+            val fm = g.fontMetrics
+            g.color = SLOT_NUMBER_BACKGROUND
+            g.fillRect(x + 1, y + 1, fm.stringWidth(label) + 3, fm.ascent + 2)
+            g.color = Color.WHITE
+            g.drawString(label, x + 2, y + fm.ascent + 1)
+            g.font = originalFont
+        }
     }
 
     private fun computePreferredSize(forModel: PreviewModel?): Dimension {
         if (forModel == null) return Dimension(240, 100)
         val size = gridContentSize(forModel)
         val topReserve = if (chestSpriteFor(forModel) != null) MIN_MARGIN else nonSpriteTopReserve()
-        return Dimension(MIN_MARGIN * 2 + size.width, topReserve + size.height)
+        val logicalWidth = MIN_MARGIN * 2 + size.width
+        val logicalHeight = topReserve + size.height
+        return Dimension((logicalWidth * zoom).toInt(), (logicalHeight * zoom).toInt())
     }
 
     private fun colorForMaterial(material: String): Color {
