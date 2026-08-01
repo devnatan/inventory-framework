@@ -11,22 +11,19 @@ public class RowColumnSample extends View {
 
     @Override
     public void onInit(@NotNull ViewConfigBuilder config) {
-        config.cancelOnClick().title("Row & Column").size(4);
+        config.cancelOnClick().title("Row & Column").size(6);
     }
 
     @Override
     public void onFirstRender(@NotNull RenderContext render) {
-        final int columnsCount = render.getContainer().getColumnsCount();
-        final int rowsCount = render.getContainer().getRowsCount();
+		render.slot(13, new ItemStack(Material.DIAMOND_SWORD));
 
-        // Fills the whole first row, left to right.
-        for (int i = 0; i < columnsCount; i++) {
-            render.firstRow().withItem(new ItemStack(Material.LIME_STAINED_GLASS_PANE));
-        }
+		render.firstRow((pos, slot) ->
+			slot.withItem(new ItemStack(Material.BLUE_STAINED_GLASS_PANE))
+		);
 
-        // Fills the whole last column, top to bottom.
-        for (int i = 0; i < rowsCount; i++) {
-            render.lastColumn().withItem(new ItemStack(Material.ORANGE_STAINED_GLASS_PANE));
-        }
+		render.lastColumn((pos, slot) ->
+			slot.withItem(new ItemStack(Material.BLACK_STAINED_GLASS_PANE))
+		);
     }
 }
