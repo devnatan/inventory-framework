@@ -1,12 +1,12 @@
 package me.devnatan.inventoryframework.runtime.view
 
-import me.devnatan.inventoryframework.View
 import me.devnatan.inventoryframework.ViewConfigBuilder
 import me.devnatan.inventoryframework.component.MinestomItemComponentBuilder
 import me.devnatan.inventoryframework.component.Pagination
-import me.devnatan.inventoryframework.context.Context
-import me.devnatan.inventoryframework.context.RenderContext
-import me.devnatan.inventoryframework.context.SlotClickContext
+import me.devnatan.inventoryframework.minestom.View
+import me.devnatan.inventoryframework.minestom.context.Context
+import me.devnatan.inventoryframework.minestom.context.RenderContext
+import me.devnatan.inventoryframework.minestom.context.SlotClickContext
 import me.devnatan.inventoryframework.runtime.ExampleUtil.displayItem
 import me.devnatan.inventoryframework.runtime.ExampleUtil.getRandomItems
 import me.devnatan.inventoryframework.state.State

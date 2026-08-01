@@ -1,12 +1,12 @@
 package me.devnatan.inventoryframework.runtime.view;
 
 import java.util.Arrays;
-import me.devnatan.inventoryframework.View;
 import me.devnatan.inventoryframework.ViewConfigBuilder;
-import me.devnatan.inventoryframework.context.Context;
-import me.devnatan.inventoryframework.context.RenderContext;
-import me.devnatan.inventoryframework.context.SlotClickContext;
-import me.devnatan.inventoryframework.context.SlotRenderContext;
+import me.devnatan.inventoryframework.bukkit.View;
+import me.devnatan.inventoryframework.bukkit.context.Context;
+import me.devnatan.inventoryframework.bukkit.context.RenderContext;
+import me.devnatan.inventoryframework.bukkit.context.SlotClickContext;
+import me.devnatan.inventoryframework.bukkit.context.SlotRenderContext;
 import me.devnatan.inventoryframework.state.MutableIntState;
 import me.devnatan.inventoryframework.state.timer.Timer;
 import me.devnatan.inventoryframework.state.timer.TimerState;

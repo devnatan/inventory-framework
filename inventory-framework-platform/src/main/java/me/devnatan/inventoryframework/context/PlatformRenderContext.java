@@ -49,7 +49,7 @@ public abstract class PlatformRenderContext<T extends ItemComponentBuilder<T, C>
     private final Map<Integer, List<BiFunction<Integer, Integer, ComponentFactory>>> columnSlotFactories =
             new LinkedHashMap<>();
 
-    PlatformRenderContext(
+    protected PlatformRenderContext(
             @NotNull UUID id,
             @NotNull PlatformView root,
             @NotNull ViewConfig config,

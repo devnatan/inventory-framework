@@ -1,6 +1,6 @@
 package me.devnatan.inventoryframework.runtime
 
-import me.devnatan.inventoryframework.ViewFrame
+import me.devnatan.inventoryframework.minestom.ViewFrame
 import me.devnatan.inventoryframework.runtime.command.GamemodeCommand
 import me.devnatan.inventoryframework.runtime.command.IFExampleCommand
 import me.devnatan.inventoryframework.runtime.view.Failing

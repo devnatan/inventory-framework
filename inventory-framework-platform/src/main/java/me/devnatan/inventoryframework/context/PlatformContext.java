@@ -9,7 +9,7 @@ public abstract class PlatformContext extends AbstractIFContext {
     private boolean endless;
     private boolean active = true;
 
-    PlatformContext() {}
+    protected PlatformContext() {}
 
     @SuppressWarnings("rawtypes")
     @Override

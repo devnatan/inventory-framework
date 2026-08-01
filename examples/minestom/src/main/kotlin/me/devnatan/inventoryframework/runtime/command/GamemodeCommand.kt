@@ -1,6 +1,6 @@
 package me.devnatan.inventoryframework.runtime.command
 
-import me.devnatan.inventoryframework.ViewFrame
+import me.devnatan.inventoryframework.minestom.ViewFrame
 import net.minestom.server.command.CommandSender
 import net.minestom.server.command.builder.Command
 import net.minestom.server.command.builder.CommandContext

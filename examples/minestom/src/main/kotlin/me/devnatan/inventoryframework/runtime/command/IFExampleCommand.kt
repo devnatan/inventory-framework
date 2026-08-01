@@ -1,6 +1,6 @@
 package me.devnatan.inventoryframework.runtime.command
 
-import me.devnatan.inventoryframework.ViewFrame
+import me.devnatan.inventoryframework.minestom.ViewFrame
 import me.devnatan.inventoryframework.runtime.view.Failing
 import me.devnatan.inventoryframework.runtime.view.ScheduledView
 import me.devnatan.inventoryframework.runtime.view.SimplePagination

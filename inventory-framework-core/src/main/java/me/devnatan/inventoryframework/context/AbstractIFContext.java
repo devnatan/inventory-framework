@@ -216,7 +216,7 @@ abstract class AbstractIFContext extends DefaultStateValueHost implements IFCont
      * Throws a {@link InventoryFrameworkException} saying that the method that's being executed is
      * not supported if this context is a shared context.
      */
-    final void tryThrowDoNotWorkWithSharedContext() {
+    protected final void tryThrowDoNotWorkWithSharedContext() {
         if (!isShared()) return;
         throw new UnsupportedOperationInSharedContextException();
     }
@@ -227,7 +227,7 @@ abstract class AbstractIFContext extends DefaultStateValueHost implements IFCont
      *
      * @param replacement The alternative method to be used.
      */
-    final void tryThrowDoNotWorkWithSharedContext(String replacement) {
+    protected final void tryThrowDoNotWorkWithSharedContext(String replacement) {
         if (!isShared()) return;
         throw new UnsupportedOperationInSharedContextException(replacement);
     }

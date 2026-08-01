@@ -1,6 +1,6 @@
 package me.devnatan.inventoryframework.runtime.listener;
 
-import me.devnatan.inventoryframework.ViewFrame;
+import me.devnatan.inventoryframework.bukkit.ViewFrame;
 import me.devnatan.inventoryframework.runtime.view.SimplePagination;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.EventHandler;

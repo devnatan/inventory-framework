@@ -1,10 +1,10 @@
 package me.devnatan.inventoryframework.runtime.view
 
-import me.devnatan.inventoryframework.View
 import me.devnatan.inventoryframework.ViewConfigBuilder
-import me.devnatan.inventoryframework.context.Context
-import me.devnatan.inventoryframework.context.RenderContext
-import me.devnatan.inventoryframework.context.SlotClickContext
+import me.devnatan.inventoryframework.minestom.View
+import me.devnatan.inventoryframework.minestom.context.Context
+import me.devnatan.inventoryframework.minestom.context.RenderContext
+import me.devnatan.inventoryframework.minestom.context.SlotClickContext
 import me.devnatan.inventoryframework.runtime.ExampleUtil
 import net.minestom.server.item.Material
 

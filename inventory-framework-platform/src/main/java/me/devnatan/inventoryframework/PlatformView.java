@@ -570,18 +570,26 @@ public abstract class PlatformView<
     /**
      * The initialization state of this view.
      *
+     * <p><b><i> This is an internal inventory-framework API that should not be used from outside of
+     * this library. No compatibility guarantees are provided. </i></b>
+     *
      * @return If this view was initialized.
      */
-    final boolean isInitialized() {
+    @ApiStatus.Internal
+    public final boolean isInitialized() {
         return initialized;
     }
 
     /**
      * Sets the initialization state of this view.
      *
+     * <p><b><i> This is an internal inventory-framework API that should not be used from outside of
+     * this library. No compatibility guarantees are provided. </i></b>
+     *
      * @param initialized The new initialization state.
      */
-    final void setInitialized(boolean initialized) {
+    @ApiStatus.Internal
+    public final void setInitialized(boolean initialized) {
         this.initialized = initialized;
     }
 
@@ -601,10 +609,14 @@ public abstract class PlatformView<
      * <p>
      * Use it to register pipeline interceptors.
      *
+     * <p><b><i> This is an internal inventory-framework API that should not be used from outside of
+     * this library. No compatibility guarantees are provided. </i></b>
+     *
      * @throws IllegalStateException If this platform view is already initialized.
      */
     @SuppressWarnings("unchecked")
-    final void internalInitialization(IFViewFrame<?, ?> framework) {
+    @ApiStatus.Internal
+    public final void internalInitialization(IFViewFrame<?, ?> framework) {
         if (isInitialized())
             throw new IllegalStateException("Tried to call internal initialization but view is already initialized");
 
@@ -631,7 +643,7 @@ public abstract class PlatformView<
         pipeline.execute(StandardPipelinePhases.INIT, this);
     }
 
-    abstract void registerPlatformInterceptors();
+    protected abstract void registerPlatformInterceptors();
     // endregion
 
     @ApiStatus.Internal

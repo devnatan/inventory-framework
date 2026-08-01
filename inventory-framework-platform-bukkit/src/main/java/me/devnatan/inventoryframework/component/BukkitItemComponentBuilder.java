@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 import me.devnatan.inventoryframework.Ref;
 import me.devnatan.inventoryframework.ViewContainer;
 import me.devnatan.inventoryframework.VirtualView;
+import me.devnatan.inventoryframework.bukkit.context.*;
 import me.devnatan.inventoryframework.context.*;
 import me.devnatan.inventoryframework.state.State;
 import me.devnatan.inventoryframework.utils.SlotConverter;

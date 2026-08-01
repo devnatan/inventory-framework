@@ -1,5 +1,13 @@
 # Changelog
 
+# Unreleased
+
+* **Breaking:** Moved Bukkit and Minestom platform classes that collided on the same package name — making it impossible to depend on both platforms in one project — into platform-specific subpackages (#782):
+  * Bukkit: `me.devnatan.inventoryframework.{View,ViewFrame,IFInventoryListener}` → `me.devnatan.inventoryframework.bukkit.{View,ViewFrame,IFInventoryListener}`; `me.devnatan.inventoryframework.context.{Context,CloseContext,OpenContext,RenderContext,SlotClickContext,SlotContext,SlotRenderContext}` → `me.devnatan.inventoryframework.bukkit.context.*`.
+  * Minestom: same classes move from the identical old paths to `me.devnatan.inventoryframework.minestom` and `me.devnatan.inventoryframework.minestom.context` respectively.
+  * The Paper artifact re-exports Bukkit's classes unchanged, so it picks up the new `me.devnatan.inventoryframework.bukkit` package automatically.
+  * Update your imports accordingly; a simple find-and-replace of the old package prefix with the platform-specific one covers most cases.
+
 # 3.2.0 (12-05-2024)
 
 * Minecraft v1.21.3 support. Thanks to @nicolube (#688)

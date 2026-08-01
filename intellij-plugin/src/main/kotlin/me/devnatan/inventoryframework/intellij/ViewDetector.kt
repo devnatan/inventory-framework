@@ -11,7 +11,7 @@ import org.jetbrains.uast.UFile
 import org.jetbrains.uast.toUElementOfType
 import org.jetbrains.uast.visitor.AbstractUastVisitor
 
-private const val VIEW_FQN = "me.devnatan.inventoryframework.View"
+private const val VIEW_FQN = "me.devnatan.inventoryframework.bukkit.View"
 private const val VIEWS_FQN = "me.devnatan.inventoryframework.Views"
 private val VIEWS_ENTRY_POINT_METHODS = setOf("rows", "type", "builder")
 
