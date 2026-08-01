@@ -38,7 +38,7 @@ private const val SPRITE_SLOT_SIZE = 18
 private const val SPRITE_ORIGIN_X = 7
 private const val SPRITE_ORIGIN_Y = 17
 private const val TITLE_FONT_SIZE = BASE_TITLE_FONT_SIZE * SPRITE_SCALE
-private const val SLOT_NUMBER_FONT_SIZE = BASE_SLOT_NUMBER_FONT_SIZE * SPRITE_SCALE
+private const val SLOT_NUMBER_FONT_SIZE = BASE_SLOT_NUMBER_FONT_SIZE * SPRITE_SCALE - 2f
 
 // Vanilla Minecraft renders container titles in a fixed dark gray (0x404040) regardless of
 // any theme, since it's part of the emulated game screen rather than IDE chrome.
@@ -78,6 +78,13 @@ class InventoryPreviewPanel : JPanel() {
     var onSlotClicked: ((TextRange) -> Unit)? = null
 
     var showSlotNumbers: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            repaint()
+        }
+
+    var showEmptySlots: Boolean = true
         set(value) {
             if (field == value) return
             field = value
@@ -282,7 +289,7 @@ class InventoryPreviewPanel : JPanel() {
         val slot = model.slots[index]
         val isFilled = slot?.dynamic == true || slot?.material != null || (layoutChar != null && layoutChar != ' ')
 
-        if (isFilled || paintEmptyBackground) {
+        if (isFilled || (paintEmptyBackground && showEmptySlots)) {
             g.color = when {
                 slot?.dynamic == true -> JBColor.YELLOW
                 slot?.material != null -> colorForMaterial(slot.material)

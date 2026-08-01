@@ -158,6 +158,13 @@ class InventoryPreviewFileEditor(
             }
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
         })
+        group.add(object : ToggleAction("Show Empty Slots", "Toggle the placeholder background for empty slots", AllIcons.Graph.Grid) {
+            override fun isSelected(e: AnActionEvent) = panel.showEmptySlots
+            override fun setSelected(e: AnActionEvent, state: Boolean) {
+                panel.showEmptySlots = state
+            }
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
         group.addSeparator()
         group.add(object : AnAction("Copy as Image", "Copy the current preview render to the clipboard", AllIcons.Actions.Copy) {
             override fun actionPerformed(e: AnActionEvent) = copyPreviewAsImage(e)
