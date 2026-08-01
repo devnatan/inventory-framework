@@ -4,6 +4,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.ui.JBColor
 import java.awt.Color
 import java.awt.Dimension
+import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.Point
@@ -17,18 +18,44 @@ import javax.swing.JPanel
 private const val SLOT_SIZE = 32
 private const val SLOT_GAP = 2
 private const val MIN_MARGIN = 12
-private const val TITLE_GRID_GAP = 16
+// Padding between the title's baseline and the grid below it; the space actually reserved
+// above the grid also includes the title font's real ascent+descent (see nonSpriteTopReserve).
+private const val TITLE_GRID_GAP = 6
+
+// Vanilla Minecraft's default font renders glyphs about 7px tall unscaled; scaled up to match
+// the sprite grid it reads close to how the game actually looks, rather than a generic UI size.
+private const val BASE_TITLE_FONT_SIZE = 9f
+
+// Vanilla Minecraft draws every container's title at (8, 6) relative to the top-left corner
+// of its GUI texture, left-aligned rather than centered.
+private const val TITLE_INSET_X = 8
+private const val TITLE_INSET_Y = 6
 
 private const val CHEST_TYPE_NAME = "CHEST"
 private const val SPRITE_SCALE = 2
 private const val SPRITE_SLOT_SIZE = 18
 private const val SPRITE_ORIGIN_X = 7
 private const val SPRITE_ORIGIN_Y = 17
+private const val TITLE_FONT_SIZE = BASE_TITLE_FONT_SIZE * SPRITE_SCALE
+
+// Vanilla Minecraft renders container titles in a fixed dark gray (0x404040) regardless of
+// any theme, since it's part of the emulated game screen rather than IDE chrome.
+private val TITLE_COLOR = Color(0x40, 0x40, 0x40)
 
 private val chestSprites: Map<Int, BufferedImage?> by lazy {
     (1..6).associateWith { rows ->
         InventoryPreviewPanel::class.java.getResourceAsStream("/assets/sprites/chest-$rows.png")?.use(ImageIO::read)
     }
+}
+
+// Mirrors the Minecraft default font's blocky look; null (falling back to the panel's
+// default font) if the resource is missing or the platform rejects the font file.
+private val titleFont: Font? by lazy {
+    runCatching {
+        InventoryPreviewPanel::class.java.getResourceAsStream("/assets/fonts/monocraft/Monocraft.otf")?.use {
+            Font.createFont(Font.TRUETYPE_FONT, it).deriveFont(Font.PLAIN, TITLE_FONT_SIZE)
+        }
+    }.getOrNull()
 }
 
 class InventoryPreviewPanel : JPanel() {
@@ -65,6 +92,7 @@ class InventoryPreviewPanel : JPanel() {
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
+        (g as Graphics2D).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
         val currentModel = model
         if (currentModel == null) {
             g.color = JBColor.foreground()
@@ -73,17 +101,29 @@ class InventoryPreviewPanel : JPanel() {
         }
 
         val (originX, originY) = gridOrigin(currentModel)
-        val title = currentModel.title ?: "(dynamic title)"
-        val gridWidth = gridContentSize(currentModel).width
-        g.color = JBColor.foreground()
-        g.drawString(title, originX + (gridWidth - g.fontMetrics.stringWidth(title)) / 2, originY - 4)
-
         val sprite = chestSpriteFor(currentModel)
         if (sprite != null) {
             paintSpriteGrid(g, currentModel, sprite, originX, originY)
         } else {
             paintDrawnGrid(g, currentModel, originX, originY)
         }
+        paintTitle(g, currentModel, originX, originY)
+    }
+
+    // Drawn after the grid/frame so the text sits on top of it, matching the in-game
+    // layering where the title is part of the container's foreground, not a separate header.
+    private fun paintTitle(g: Graphics, model: PreviewModel, originX: Int, originY: Int) {
+        val title = model.title ?: "(dynamic title)"
+        g.color = TITLE_COLOR
+        val originalFont = g.font
+        titleFont?.let { g.font = it }
+        val (x, y) = if (chestSpriteFor(model) != null) {
+            (originX + TITLE_INSET_X * SPRITE_SCALE) to (originY + TITLE_INSET_Y * SPRITE_SCALE - TITLE_GRID_GAP + g.fontMetrics.ascent)
+        } else {
+            (originX + TITLE_INSET_X) to (originY - TITLE_GRID_GAP - g.fontMetrics.descent)
+        }
+        g.drawString(title, x, y)
+        g.font = originalFont
     }
 
     private fun chestSpriteFor(model: PreviewModel): BufferedImage? {
@@ -103,11 +143,21 @@ class InventoryPreviewPanel : JPanel() {
     // Centers the grid within whatever space is currently available, falling back to a fixed
     // margin when the panel is smaller than the content. Recomputed from the panel's live
     // width/height on every call (paint and click hit-testing alike) so they can never drift apart.
+    // The sprite frame already reserves room for the title in its own texture, so only the
+    // frame-less fallback needs the extra top gap.
     private fun gridOrigin(model: PreviewModel): Pair<Int, Int> {
         val size = gridContentSize(model)
+        val topReserve = if (chestSpriteFor(model) != null) MIN_MARGIN else nonSpriteTopReserve()
         val x = maxOf(MIN_MARGIN, (width - size.width) / 2)
-        val y = maxOf(MIN_MARGIN + TITLE_GRID_GAP, (height - size.height) / 2)
+        val y = maxOf(topReserve, (height - size.height) / 2)
         return x to y
+    }
+
+    // Sized from the title font's real ascent/descent rather than a guessed constant, so the
+    // reserved band always fits the title regardless of font metrics.
+    private fun nonSpriteTopReserve(): Int {
+        val fm = getFontMetrics(titleFont ?: font)
+        return MIN_MARGIN + fm.ascent + fm.descent + TITLE_GRID_GAP
     }
 
     // Shared by painting and click hit-testing so the two can never drift apart.
@@ -206,7 +256,8 @@ class InventoryPreviewPanel : JPanel() {
     private fun computePreferredSize(forModel: PreviewModel?): Dimension {
         if (forModel == null) return Dimension(240, 100)
         val size = gridContentSize(forModel)
-        return Dimension(MIN_MARGIN * 2 + size.width, MIN_MARGIN + TITLE_GRID_GAP + size.height)
+        val topReserve = if (chestSpriteFor(forModel) != null) MIN_MARGIN else nonSpriteTopReserve()
+        return Dimension(MIN_MARGIN * 2 + size.width, topReserve + size.height)
     }
 
     private fun colorForMaterial(material: String): Color {
