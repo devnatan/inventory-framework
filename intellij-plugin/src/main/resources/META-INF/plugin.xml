@@ -4,8 +4,7 @@
     <vendor url="https://github.com/DevNatan/inventory-framework">DevNatan</vendor>
 
     <description><![CDATA[
-        Live preview for inventory-framework views: open a View class or an inline Views.rows(...)
-        builder chain and see the resulting inventory grid rendered next to the source.
+        Live preview for inventory-framework views.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
