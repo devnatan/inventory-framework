@@ -303,13 +303,17 @@ class InventoryPreviewPanel : JPanel() {
         val layoutChar = model.layout?.getOrNull(row)?.getOrNull(col)
         val index = row * model.columns + col
         val slot = model.slots[index]
-        val isFilled = slot?.dynamic == true || slot?.material != null || (layoutChar != null && layoutChar != ' ')
+        val isFilled = slot?.dynamic == true || slot?.material != null
+        // A layout character with no resolved binding (e.g. a pagination content-area marker)
+        // isn't "filled" - we just don't know what's actually rendered there - so it's still
+        // subject to the empty-slot toggle like any other unfilled slot.
+        val isLayoutPlaceholder = !isFilled && layoutChar != null && layoutChar != ' '
 
-        if (isFilled || (paintEmptyBackground && showEmptySlots)) {
+        if (isFilled || ((paintEmptyBackground || isLayoutPlaceholder) && showEmptySlots)) {
             g.color = when {
                 slot?.dynamic == true -> JBColor.YELLOW
                 slot?.material != null -> colorForMaterial(slot.material)
-                layoutChar != null && layoutChar != ' ' -> JBColor.LIGHT_GRAY
+                isLayoutPlaceholder -> JBColor.LIGHT_GRAY
                 else -> JBColor.GRAY
             }
             g.fillRect(x + 1, y + 1, size - 2, size - 2)
