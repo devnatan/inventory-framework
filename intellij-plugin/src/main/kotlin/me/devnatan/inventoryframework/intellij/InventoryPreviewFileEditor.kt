@@ -15,15 +15,25 @@ import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.MessageType
+import com.intellij.openapi.ui.popup.Balloon
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiTreeChangeAdapter
 import com.intellij.psi.PsiTreeChangeEvent
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Alarm
 import java.awt.BorderLayout
+import java.awt.Image
+import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
+import java.awt.datatransfer.UnsupportedFlavorException
+import java.awt.image.BufferedImage
 import java.beans.PropertyChangeListener
 import java.beans.PropertyChangeSupport
 import javax.swing.JComponent
@@ -31,6 +41,18 @@ import javax.swing.JPanel
 
 private const val REFRESH_DEBOUNCE_MILLIS = 300
 private const val TOOLBAR_PLACE = "InventoryFramework.PreviewToolbar"
+private const val COPY_FEEDBACK_FADEOUT_MILLIS = 1500
+
+private class ImageTransferable(private val image: Image) : Transferable {
+    override fun getTransferDataFlavors(): Array<DataFlavor> = arrayOf(DataFlavor.imageFlavor)
+
+    override fun isDataFlavorSupported(flavor: DataFlavor): Boolean = flavor == DataFlavor.imageFlavor
+
+    override fun getTransferData(flavor: DataFlavor): Any {
+        if (flavor != DataFlavor.imageFlavor) throw UnsupportedFlavorException(flavor)
+        return image
+    }
+}
 
 class InventoryPreviewFileEditor(
     private val project: Project,
@@ -136,7 +158,32 @@ class InventoryPreviewFileEditor(
             }
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
         })
+        group.addSeparator()
+        group.add(object : AnAction("Copy as Image", "Copy the current preview render to the clipboard", AllIcons.Actions.Copy) {
+            override fun actionPerformed(e: AnActionEvent) = copyPreviewAsImage(e)
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
         return group
+    }
+
+    private fun copyPreviewAsImage(e: AnActionEvent) {
+        val width = panel.width.coerceAtLeast(1)
+        val height = panel.height.coerceAtLeast(1)
+        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            panel.paint(graphics)
+        } finally {
+            graphics.dispose()
+        }
+        Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageTransferable(image), null)
+
+        val anchor = e.inputEvent?.component as? JComponent ?: panel
+        JBPopupFactory.getInstance()
+            .createHtmlTextBalloonBuilder("Copied preview to clipboard", MessageType.INFO, null)
+            .setFadeoutTime(COPY_FEEDBACK_FADEOUT_MILLIS.toLong())
+            .createBalloon()
+            .show(RelativePoint.getSouthOf(anchor), Balloon.Position.below)
     }
 
     override fun getComponent(): JComponent = rootComponent
