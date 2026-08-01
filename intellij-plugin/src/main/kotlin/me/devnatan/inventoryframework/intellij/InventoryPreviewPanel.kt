@@ -25,6 +25,7 @@ private const val TITLE_GRID_GAP = 6
 // Vanilla Minecraft's default font renders glyphs about 7px tall unscaled; scaled up to match
 // the sprite grid it reads close to how the game actually looks, rather than a generic UI size.
 private const val BASE_TITLE_FONT_SIZE = 9f
+private const val BASE_SLOT_NUMBER_FONT_SIZE = 8f
 
 // Vanilla Minecraft draws every container's title at (8, 6) relative to the top-left corner
 // of its GUI texture, left-aligned rather than centered.
@@ -37,6 +38,7 @@ private const val SPRITE_SLOT_SIZE = 18
 private const val SPRITE_ORIGIN_X = 7
 private const val SPRITE_ORIGIN_Y = 17
 private const val TITLE_FONT_SIZE = BASE_TITLE_FONT_SIZE * SPRITE_SCALE
+private const val SLOT_NUMBER_FONT_SIZE = BASE_SLOT_NUMBER_FONT_SIZE * SPRITE_SCALE
 
 // Vanilla Minecraft renders container titles in a fixed dark gray (0x404040) regardless of
 // any theme, since it's part of the emulated game screen rather than IDE chrome.
@@ -45,7 +47,6 @@ private val TITLE_COLOR = Color(0x40, 0x40, 0x40)
 private val ZOOM_LEVELS = listOf(0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0)
 private val DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.indexOf(1.0)
 
-private val SLOT_NUMBER_FONT = Font(Font.MONOSPACED, Font.PLAIN, 9)
 private val SLOT_NUMBER_BACKGROUND = Color(0, 0, 0, 170)
 
 private val chestSprites: Map<Int, BufferedImage?> by lazy {
@@ -54,15 +55,18 @@ private val chestSprites: Map<Int, BufferedImage?> by lazy {
     }
 }
 
-// Mirrors the Minecraft default font's blocky look; null (falling back to the panel's
-// default font) if the resource is missing or the platform rejects the font file.
-private val titleFont: Font? by lazy {
+// Mirrors the Minecraft default font's blocky look; null if the resource is missing or the
+// platform rejects the font file, in which case callers fall back to the panel's default font.
+private val monocraftFont: Font? by lazy {
     runCatching {
         InventoryPreviewPanel::class.java.getResourceAsStream("/assets/fonts/monocraft/Monocraft.otf")?.use {
-            Font.createFont(Font.TRUETYPE_FONT, it).deriveFont(Font.PLAIN, TITLE_FONT_SIZE)
+            Font.createFont(Font.TRUETYPE_FONT, it)
         }
     }.getOrNull()
 }
+
+private val titleFont: Font? by lazy { monocraftFont?.deriveFont(Font.PLAIN, TITLE_FONT_SIZE) }
+private val slotNumberFont: Font? by lazy { monocraftFont?.deriveFont(Font.PLAIN, SLOT_NUMBER_FONT_SIZE) }
 
 class InventoryPreviewPanel : JPanel() {
 
@@ -307,12 +311,12 @@ class InventoryPreviewPanel : JPanel() {
         if (showSlotNumbers) {
             val label = index.toString()
             val originalFont = g.font
-            g.font = SLOT_NUMBER_FONT
+            g.font = slotNumberFont ?: g.font.deriveFont(SLOT_NUMBER_FONT_SIZE)
             val fm = g.fontMetrics
             g.color = SLOT_NUMBER_BACKGROUND
-            g.fillRect(x + 1, y + 1, fm.stringWidth(label) + 3, fm.ascent + 2)
+            g.fillRect(x + 1, y + 1, fm.stringWidth(label) + 4, fm.ascent + 3)
             g.color = Color.WHITE
-            g.drawString(label, x + 2, y + fm.ascent + 1)
+            g.drawString(label, x + 3, y + fm.ascent + 1)
             g.font = originalFont
         }
     }
