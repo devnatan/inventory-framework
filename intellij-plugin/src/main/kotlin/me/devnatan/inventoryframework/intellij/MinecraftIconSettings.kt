@@ -7,9 +7,6 @@ import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.XmlSerializerUtil
 
-// Lets a dev override where ItemIconProvider looks for a Minecraft client jar, for setups the
-// platform-default guess (see ItemIconProvider.minecraftHome) can't find - a portable/custom
-// launcher, an install on another drive, etc. Empty means "auto-detect".
 @Service(Service.Level.APP)
 @State(name = "InventoryFrameworkMinecraftSettings", storages = [Storage("inventoryframework-minecraft.xml")])
 class MinecraftIconSettings : PersistentStateComponent<MinecraftIconSettings.State> {
