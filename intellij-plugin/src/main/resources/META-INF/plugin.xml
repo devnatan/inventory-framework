@@ -13,6 +13,11 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <fileEditorProvider implementation="me.devnatan.inventoryframework.intellij.InventoryPreviewFileEditorProvider"/>
+        <applicationConfigurable
+            parentId="tools"
+            instance="me.devnatan.inventoryframework.intellij.MinecraftIconSettingsConfigurable"
+            id="me.devnatan.inventoryframework.intellij.MinecraftIconSettingsConfigurable"
+            displayName="Inventory Framework"/>
         <localInspection
             language=""
             groupName="Inventory Framework"

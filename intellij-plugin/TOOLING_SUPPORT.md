@@ -45,17 +45,26 @@ the user's code, so anything that depends on runtime state can only ever be appr
   nearest-neighbor interpolation to keep the pixel art crisp. Slot content (material color+label,
   dynamic marker, layout fill) is overlaid at the sprite's real slot positions.
 - Every other view type still renders as a plain drawn grid — there's no sprite for them.
+- **Real item icons** (`ItemIconProvider`), opportunistically: if the machine running the IDE has
+  a vanilla Minecraft client installed, icons are read directly from that client jar's
+  `assets/minecraft/textures/{item,block}/<material>.png` at render time — nothing is bundled or
+  redistributed by the plugin itself, since Mojang's usage guidelines prohibit that for
+  third-party tools. Animated textures are cropped to their first frame and anything above 16x16
+  is downscaled. If a material has no same-named texture file (e.g. a stained glass pane's icon is
+  really just its plain glass block's texture), the reference is read out of the item's own
+  `assets/minecraft/models/item/<material>.json` instead - one model deep, without following
+  parent chains or resolving `"#variable"` texture substitution, so composite block-shaped items
+  whose icon only inherits a texture from a parent model (fences, walls, carpets, stairs, ...)
+  still fall back to the placeholder. When no client jar can be found, slots fall back to the
+  original colored square + 3-letter material abbreviation. (The bundled chest frame sprites are
+  original/generic art, not extracted Mojang textures, so they don't carry the same restriction and
+  are unaffected either way.) The `.minecraft` directory used for auto-detection can be overridden
+  per-machine in **Settings > Tools > Inventory Framework** (`MinecraftIconSettings`), for setups
+  the platform default guess can't find (portable/custom launchers, an install on another drive,
+  etc.).
 
 ## Known limitations / not supported
 
-- **No real item icons.** Items still render as a deterministic colored square + a 3-letter
-  material abbreviation, not actual item textures — only the chest *frame* is a real sprite, not
-  the items placed inside it. Mojang's usage guidelines prohibit redistributing or serving game
-  assets from a tool, which ruled out both bundling an item texture pack and fetching from any
-  hosted API (including reputable-looking third-party ones). The compliant path — reading item
-  textures from a client jar the user already owns, entirely locally — was scoped out as a
-  separate follow-up, not built in this pass. (The bundled chest frame sprites are original/generic
-  art, not extracted Mojang textures, so they don't carry the same restriction.)
 - **Nothing dynamic is ever evaluated.** Non-literal titles, `renderWith`/`onRender` lambdas,
   `displayIf`/state-driven conditions, and any item expression that isn't a literal
   `new ItemStack(Material.X)` (directly or via a simple local variable) all show as a generic

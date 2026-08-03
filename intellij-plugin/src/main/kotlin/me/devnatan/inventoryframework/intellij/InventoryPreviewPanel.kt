@@ -306,25 +306,36 @@ class InventoryPreviewPanel : JPanel() {
         // isn't "filled" - we just don't know what's actually rendered there - so it's still
         // subject to the empty-slot toggle like any other unfilled slot.
         val isLayoutPlaceholder = !isFilled && layoutChar != null && layoutChar != ' '
+        // Only resolves to a real texture if the user has a local Minecraft client jar installed
+        // (see ItemIconProvider); otherwise null and the colored-square placeholder below is used.
+        val icon = slot?.material?.let { ItemIconProvider.iconFor(it) }
 
         if (isFilled || ((paintEmptyBackground || isLayoutPlaceholder) && showEmptySlots)) {
-            g.color = when {
-                slot?.dynamic == true -> JBColor.YELLOW
-                slot?.material != null -> colorForMaterial(slot.material)
-                isLayoutPlaceholder -> JBColor.LIGHT_GRAY
-                else -> JBColor.GRAY
+            if (icon == null) {
+                g.color = when {
+                    slot?.dynamic == true -> JBColor.YELLOW
+                    slot?.material != null -> colorForMaterial(slot.material)
+                    isLayoutPlaceholder -> JBColor.LIGHT_GRAY
+                    else -> JBColor.GRAY
+                }
+                g.fillRect(x + 1, y + 1, size - 2, size - 2)
             }
-            g.fillRect(x + 1, y + 1, size - 2, size - 2)
             if (paintEmptyBackground) {
                 g.color = JBColor.DARK_GRAY
                 g.drawRect(x, y, size, size)
             }
         }
 
+        if (icon != null) {
+            (g as Graphics2D).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
+            val inset = size / 16
+            g.drawImage(icon, x + inset, y + inset, size - inset * 2, size - inset * 2, null)
+        }
+
         g.color = Color.BLACK
         when {
             slot?.dynamic == true -> g.drawString("?", x + size / 2 - 3, y + size / 2 + 5)
-            slot?.material != null -> g.drawString(abbreviateMaterial(slot.material), x + 3, y + size - 4)
+            slot?.material != null && icon == null -> g.drawString(abbreviateMaterial(slot.material), x + 3, y + size - 4)
         }
 
         if (index in highlightedSlotIndices) {
