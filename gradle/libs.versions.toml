@@ -1,5 +1,5 @@
 [versions]
-jetbrains-annotations = "26.0.2"
+jetbrains-annotations = "26.1.0"
 # InventoryView changed from a class to an interface type in 1.21. That used to throw
 # IncompatibleClassChangeError on the Dynamic Title Update feature when compiled against an
 # older (class-based) InventoryView while running on a newer (interface-based) runtime.
