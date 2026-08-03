@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ToggleAction
+import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
@@ -63,10 +64,13 @@ class InventoryPreviewFileEditor(
     private val propertyChangeSupport = PropertyChangeSupport(this)
     private val refreshAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
     private var currentModel: PreviewModel? = null
+    private val interactionState = PreviewInteractionState()
+    private var interactiveModeEnabled = false
+    private val stateInlays = mutableListOf<Inlay<*>>()
     private val rootComponent: JComponent by lazy { buildComponent() }
 
     init {
-        panel.onSlotClicked = ::navigateToRange
+        panel.onSlotClicked = ::onSlotClicked
         // The editor can be reconstructed (e.g. restoring last-open tabs on startup) while the
         // project is still indexing; retry once smart mode is reached instead of caching a
         // permanent extraction failure from that race.
@@ -99,8 +103,27 @@ class InventoryPreviewFileEditor(
             null
         }
         currentModel = model
-        panel.setModel(model)
+        interactionState.reset(model)
+        panel.setModel(model?.let(interactionState::resolve))
         updateHighlightForCaret()
+        refreshStateHints()
+    }
+
+    // Shows the current simulated value next to each state field's declaration, e.g.
+    // `mutableState(0); → 3`, while interactive mode is on. Rebuilt wholesale on every state
+    // change rather than incrementally updated in place - cheap given how few state fields a
+    // view typically has, and avoids tracking which inlay belongs to which declaration.
+    private fun refreshStateHints() {
+        stateInlays.forEach { it.dispose() }
+        stateInlays.clear()
+        if (!interactiveModeEnabled) return
+        val model = currentModel ?: return
+        val editor = textEditor.editor
+        for (declaration in model.states) {
+            val value = interactionState.currentValue(declaration.id) ?: continue
+            val renderer = StateValueInlayRenderer("Current value: $value", declaration.declarationOffset)
+            editor.inlayModel.addBlockElement(declaration.declarationOffset, false, true, 0, renderer)?.let { stateInlays += it }
+        }
     }
 
     private fun updateHighlightForCaret() {
@@ -118,6 +141,65 @@ class InventoryPreviewFileEditor(
         editor.caretModel.moveToOffset(range.startOffset)
         editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
         editor.contentComponent.requestFocusInWindow()
+    }
+
+    private fun onSlotClicked(index: Int) {
+        val model = currentModel ?: return
+        if (interactiveModeEnabled) {
+            simulateClick(model, index)
+        } else {
+            model.slots[index]?.sourceRange?.let(::navigateToRange)
+        }
+    }
+
+    private fun simulateClick(model: PreviewModel, index: Int) {
+        when (val action = model.clickActions[index]) {
+            null -> return
+            PreviewClickAction.Unsupported -> showUnsupportedInteractionBalloon()
+            else -> {
+                interactionState.apply(action)
+                panel.setModel(interactionState.resolve(model))
+                refreshStateHints()
+                showSimulatedActionBalloon(action)
+            }
+        }
+    }
+
+    private fun showSimulatedActionBalloon(action: PreviewClickAction) {
+        val (stateId, description) = when (action) {
+            is PreviewClickAction.ToggleBoolean -> action.stateId to "toggled"
+            is PreviewClickAction.Delta -> action.stateId to "changed by ${if (action.delta >= 0) "+" else ""}${action.delta}"
+            is PreviewClickAction.SetLiteral -> action.stateId to "set to ${action.value}"
+            PreviewClickAction.Unsupported -> return
+        }
+        val fieldName = stateId.substringAfterLast('#')
+        JBPopupFactory.getInstance()
+            .createHtmlTextBalloonBuilder("$fieldName $description", MessageType.INFO, null)
+            .setFadeoutTime(COPY_FEEDBACK_FADEOUT_MILLIS.toLong())
+            .createBalloon()
+            .show(RelativePoint.getCenterOf(panel), Balloon.Position.above)
+    }
+
+    private fun resetInteraction() {
+        interactionState.reset(currentModel)
+        currentModel?.let { panel.setModel(interactionState.resolve(it)) }
+        refreshStateHints()
+    }
+
+    private fun undoLastInteraction() {
+        val model = currentModel ?: return
+        if (interactionState.undo()) {
+            panel.setModel(interactionState.resolve(model))
+            refreshStateHints()
+        }
+    }
+
+    private fun showUnsupportedInteractionBalloon() {
+        JBPopupFactory.getInstance()
+            .createHtmlTextBalloonBuilder("This click handler can't be simulated in the fast preview", MessageType.WARNING, null)
+            .setFadeoutTime(COPY_FEEDBACK_FADEOUT_MILLIS.toLong())
+            .createBalloon()
+            .show(RelativePoint.getCenterOf(panel), Balloon.Position.above)
     }
 
     private fun buildComponent(): JComponent {
@@ -172,6 +254,33 @@ class InventoryPreviewFileEditor(
             }
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
         })
+        group.addSeparator()
+        group.add(
+            object : ToggleAction(
+                "Interactive Preview",
+                "Click slots to simulate their click handlers instead of navigating to source",
+                AllIcons.Actions.Execute,
+            ) {
+                override fun isSelected(e: AnActionEvent) = interactiveModeEnabled
+                override fun setSelected(e: AnActionEvent, state: Boolean) {
+                    interactiveModeEnabled = state
+                    resetInteraction()
+                }
+                override fun update(e: AnActionEvent) {
+                    super.update(e)
+                    e.presentation.icon = if (interactiveModeEnabled) AllIcons.Actions.Suspend else AllIcons.Actions.Execute
+                    e.presentation.text = if (interactiveModeEnabled) "Stop Interactive Preview" else "Start Interactive Preview"
+                }
+                override fun getActionUpdateThread() = ActionUpdateThread.EDT
+            },
+        )
+        group.add(object : AnAction("Undo Last Interaction", "Revert the last simulated click", AllIcons.Actions.Undo) {
+            override fun actionPerformed(e: AnActionEvent) = undoLastInteraction()
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = interactiveModeEnabled && interactionState.canUndo()
+            }
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        })
         return group
     }
 
@@ -209,5 +318,8 @@ class InventoryPreviewFileEditor(
 
     override fun getFile(): VirtualFile = file
 
-    override fun dispose() {}
+    override fun dispose() {
+        stateInlays.forEach { it.dispose() }
+        stateInlays.clear()
+    }
 }

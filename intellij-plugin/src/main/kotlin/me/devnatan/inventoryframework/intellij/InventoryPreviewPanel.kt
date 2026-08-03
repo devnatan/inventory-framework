@@ -1,6 +1,5 @@
 package me.devnatan.inventoryframework.intellij
 
-import com.intellij.openapi.util.TextRange
 import com.intellij.ui.JBColor
 import java.awt.Color
 import java.awt.Dimension
@@ -75,7 +74,7 @@ class InventoryPreviewPanel : JPanel() {
     private var zoomIndex = DEFAULT_ZOOM_INDEX
     private val zoom: Double get() = ZOOM_LEVELS[zoomIndex]
 
-    var onSlotClicked: ((TextRange) -> Unit)? = null
+    var onSlotClicked: ((Int) -> Unit)? = null
 
     var showSlotNumbers: Boolean = false
         set(value) {
@@ -97,8 +96,7 @@ class InventoryPreviewPanel : JPanel() {
                 val currentModel = model ?: return
                 val logicalPoint = Point((e.x / zoom).toInt(), (e.y / zoom).toInt())
                 val index = slotIndexAt(currentModel, logicalPoint) ?: return
-                val range = currentModel.slots[index]?.sourceRange ?: return
-                onSlotClicked?.invoke(range)
+                onSlotClicked?.invoke(index)
             }
         })
     }

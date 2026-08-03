@@ -57,8 +57,14 @@ object ViewExtractor {
         val columns = geometry.columns
         val maxSize = minOf(geometry.maxSize, rows * columns)
 
-        val items = ItemExtractor.extract(uFile, rows, columns)
-        val slots = items.indexedSlots + layoutBoundSlots(layout, items.layoutBindings, columns)
+        val states = StateExtractor.extract(uFile)
+        val items = ItemExtractor.extract(uFile, rows, columns, states.index)
+        val slots = items.indexedSlots + layoutBoundValues(layout, items.layoutBindings, columns)
+        val conditionalItems =
+            items.indexedConditionalItems + layoutBoundValues(layout, items.layoutConditionalItems, columns)
+        val clickActionResult = ClickHandlerExtractor.extract(uFile, rows, columns, states.index)
+        val clickActions =
+            clickActionResult.indexed + layoutBoundValues(layout, clickActionResult.layoutBound, columns)
 
         return PreviewModel(
             viewTypeName = viewTypeFieldName ?: DEFAULT_VIEW_TYPE_NAME,
@@ -68,22 +74,23 @@ object ViewExtractor {
             title = title,
             layout = layout,
             slots = slots,
+            states = states.declarations,
+            conditionalItems = conditionalItems,
+            clickActions = clickActions,
         )
     }
 
-    private fun layoutBoundSlots(
-        layout: List<String>?,
-        layoutBindings: Map<Char, PreviewSlot>,
-        columns: Int,
-    ): Map<Int, PreviewSlot> {
-        if (layout == null || layoutBindings.isEmpty()) return emptyMap()
-        val slots = mutableMapOf<Int, PreviewSlot>()
+    // Shared by items, conditional items and click actions - all three are keyed by layout
+    // character and need to be flattened onto the same row/column grid the same way.
+    private fun <T> layoutBoundValues(layout: List<String>?, bindings: Map<Char, T>, columns: Int): Map<Int, T> {
+        if (layout == null || bindings.isEmpty()) return emptyMap()
+        val values = mutableMapOf<Int, T>()
         layout.forEachIndexed { row, rowChars ->
             rowChars.forEachIndexed { col, character ->
-                layoutBindings[character]?.let { slots[row * columns + col] = it }
+                bindings[character]?.let { values[row * columns + col] = it }
             }
         }
-        return slots
+        return values
     }
 
     private fun resolveViewTypeFieldName(arg: UExpression?): String? {
