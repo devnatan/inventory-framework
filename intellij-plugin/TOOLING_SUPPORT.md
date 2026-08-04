@@ -33,6 +33,12 @@ the user's code, so anything that depends on runtime state can only ever be appr
 - `withItem(new ItemStack(Material.X))`, resolved directly or through a local variable/parameter
   initializer, for: `slot(index, item)`, `slot(index).withItem(item)`, `firstSlot(item)`,
   `lastSlot(item)`, `layoutSlot(char, item)` (both the direct and chained-builder forms).
+- Falls back to any `Material.X` passed directly as an argument to a helper call when there's no
+  `new ItemStack(...)` at all - e.g. `withItem(ExampleUtil.displayItem(Material.STONE, "Label"))`.
+  The helper's body is never evaluated (this is static analysis, not execution); the Material
+  argument is just a strong enough signal on its own to use as a best-effort guess. Only looks at
+  the call's own arguments, or (through a local variable) its initializer's - not into further
+  nested calls.
 - `row(n)` / `firstRow()` / `lastRow()` / `column(n)` / `firstColumn()` / `lastColumn()`, both the
   chained (`.withItem(item)`) and `BiConsumer` factory (`(pos, slot) -> slot.withItem(item)`)
   forms — see limitations below for the heuristic these rely on.
@@ -45,17 +51,40 @@ the user's code, so anything that depends on runtime state can only ever be appr
   nearest-neighbor interpolation to keep the pixel art crisp. Slot content (material color+label,
   dynamic marker, layout fill) is overlaid at the sprite's real slot positions.
 - Every other view type still renders as a plain drawn grid — there's no sprite for them.
+- **Real item icons** (`ItemIconProvider`), opportunistically: if the machine running the IDE has
+  a vanilla Minecraft client installed, icons are read directly from that client jar at render
+  time — nothing is bundled or redistributed by the plugin itself, since Mojang's usage guidelines
+  prohibit that for third-party tools. Rather than recognizing a fixed set of shapes, a material's
+  actual model geometry (`"elements"`, each a cuboid with per-face textures) is read and rendered:
+  the model chain is walked from the material's leaf model — found directly, or, for materials
+  like fences/walls whose real icon model is only reachable through the newer
+  `assets/minecraft/items/<material>.json` indirection, through that — up through `"parent"`,
+  merging each level's `"textures"` until one with `"elements"` is found. Every element's three
+  camera-visible faces (top, and the two visible sides) are projected through a fixed dimetric
+  camera and composited depth-sorted (nearer elements drawn over farther ones), rasterized
+  per-pixel at 4x supersampling and box-filtered back down for a clean antialiased silhouette
+  instead of jagged or blurred seams. This is what makes a stair render as an actual step shape (a
+  slab plus a raised quarter-block, exactly per its own model), a fence or wall show its posts and
+  bars, and a torch show as a thin stick with a flame top — not just a fixed cube or a flat square.
+  Materials whose model never resolves to any elements (flat tool/food/"item/generated" icons, or a
+  model type this doesn't follow — see below) render as a flat square using the same texture
+  resolution instead. Animated textures are cropped to their first frame. When no client jar can be
+  found, slots fall back to the original colored square + 3-letter material abbreviation. (The
+  bundled chest frame sprites are original/generic art, not extracted Mojang textures, so they
+  don't carry the same restriction and are unaffected either way.) The `.minecraft` directory used
+  for auto-detection can be overridden per-machine in **Settings > Tools > Inventory Framework**
+  (`MinecraftIconSettings`), for setups the platform default guess can't find (portable/custom
+  launchers, an install on another drive, etc.).
+  - Known gaps in this renderer specifically: biome tinting (grass/leaves/water show their
+    texture's own base color, not the tinted one — no biome context exists to tint with); items
+    whose model uses a `select`/`special`/`condition` type in `items/<material>.json` (chests,
+    compasses, spawn eggs, ...) rather than a plain `"minecraft:model"` reference; per-face texture
+    `"rotation"` hints (ignored, so a rotated face's texture shows unrotated); and multi-layer flat
+    icons (dyed leather armor's `layer1`, potion overlay colors, etc. - only the first resolvable
+    layer is used). All of these fall back to a flat texture or the placeholder, never a crash.
 
 ## Known limitations / not supported
 
-- **No real item icons.** Items still render as a deterministic colored square + a 3-letter
-  material abbreviation, not actual item textures — only the chest *frame* is a real sprite, not
-  the items placed inside it. Mojang's usage guidelines prohibit redistributing or serving game
-  assets from a tool, which ruled out both bundling an item texture pack and fetching from any
-  hosted API (including reputable-looking third-party ones). The compliant path — reading item
-  textures from a client jar the user already owns, entirely locally — was scoped out as a
-  separate follow-up, not built in this pass. (The bundled chest frame sprites are original/generic
-  art, not extracted Mojang textures, so they don't carry the same restriction.)
 - **Nothing dynamic is ever evaluated.** Non-literal titles, `renderWith`/`onRender` lambdas,
   `displayIf`/state-driven conditions, and any item expression that isn't a literal
   `new ItemStack(Material.X)` (directly or via a simple local variable) all show as a generic

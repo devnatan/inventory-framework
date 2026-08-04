@@ -216,6 +216,7 @@ object ItemExtractor {
         val expr = rawExpr.skipParenthesizedExprDown()
         if (isNullLiteral(expr)) return null
         val material = findItemStackConstructorCall(expr)?.let { extractMaterialName(it) }
+            ?: findMaterialArgument(expr)
         return PreviewSlot(material = material, dynamic = material == null)
     }
 
@@ -239,6 +240,33 @@ object ItemExtractor {
     private fun extractMaterialName(constructorCall: UCallExpression): String? {
         val field = (constructorCall.valueArguments.getOrNull(0) as? UReferenceExpression)?.resolve() as? PsiField
             ?: return null
+        if (field.containingClass?.qualifiedName != MATERIAL_FQN) return null
+        return field.name
+    }
+
+    // Not every item comes from a bare `new ItemStack(Material.X)` - a common idiom is a helper
+    // method that builds one from a Material, e.g. `ExampleUtil.displayItem(Material.STONE,
+    // "Label")`. There's no way to evaluate what such a method actually returns (this is static
+    // analysis, not execution), but the Material passed in is still a strong, deterministic signal
+    // of what the item will be, so it's used directly as a best-effort guess. Only looks at the
+    // call's own arguments (or, through a local variable, its initializer's) - not into nested
+    // calls - mirroring findItemStackConstructorCall's one-level indirection.
+    private fun findMaterialArgument(rawExpr: UExpression): String? {
+        val call = asCallExpression(rawExpr)
+        if (call != null) {
+            return call.valueArguments.firstNotNullOfOrNull(::materialFieldName)
+        }
+
+        val expr = rawExpr.skipParenthesizedExprDown()
+        val ref = expr as? UReferenceExpression ?: return null
+        val variable = ref.resolve()?.toUElementOfType<UVariable>() ?: return null
+        val initializer = variable.uastInitializer ?: return null
+        return findMaterialArgument(initializer)
+    }
+
+    private fun materialFieldName(rawExpr: UExpression): String? {
+        val expr = rawExpr.skipParenthesizedExprDown()
+        val field = (expr as? UReferenceExpression)?.resolve() as? PsiField ?: return null
         if (field.containingClass?.qualifiedName != MATERIAL_FQN) return null
         return field.name
     }
