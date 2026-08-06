@@ -59,6 +59,7 @@ sealed class PreviewClickAction {
     data class ToggleBoolean(val stateId: String) : PreviewClickAction()
     data class Delta(val stateId: String, val delta: Int) : PreviewClickAction()
     data class SetLiteral(val stateId: String, val value: Any) : PreviewClickAction()
+    data class OpenView(val targetClassFqn: String) : PreviewClickAction()
     object Unsupported : PreviewClickAction()
 }
 

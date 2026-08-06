@@ -2,6 +2,7 @@ package me.devnatan.inventoryframework.intellij
 
 import com.intellij.ui.JBColor
 import java.awt.Color
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
 import java.awt.Graphics
@@ -10,6 +11,7 @@ import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.event.MouseMotionAdapter
 import java.awt.geom.AffineTransform
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
@@ -59,6 +61,10 @@ private val DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.indexOf(1.0)
 
 private val SLOT_NUMBER_BACKGROUND = Color(0, 0, 0, 170)
 
+// Vanilla lightens a slot under the cursor with a translucent white overlay rather than a border,
+// so a hovered slot reads as "about to be interacted with" the same way it does in-game.
+private val SLOT_HOVER_OVERLAY = Color(255, 255, 255, 80)
+
 private val chestSprites: Map<Int, BufferedImage?> by lazy {
     (1..6).associateWith { rows ->
         InventoryPreviewPanel::class.java.getResourceAsStream("/assets/sprites/chest-$rows.png")?.use(ImageIO::read)
@@ -91,10 +97,22 @@ class InventoryPreviewPanel : JPanel() {
 
     private var model: PreviewModel? = null
     private var highlightedSlotIndices: Set<Int> = emptySet()
+    private var hoveredSlotIndex: Int? = null
     private var zoomIndex = DEFAULT_ZOOM_INDEX
     private val zoom: Double get() = ZOOM_LEVELS[zoomIndex]
 
     var onSlotClicked: ((Int) -> Unit)? = null
+
+    // Whether the preview simulates click handlers instead of navigating to source. Gates both the
+    // hover-lighten effect and the pointer cursor below - outside interactive mode a click just
+    // navigates to source, so there's nothing being "hovered for interaction" to indicate.
+    var interactiveMode: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            refreshHoverCursor()
+            repaint()
+        }
 
     var showSlotNumbers: Boolean = false
         set(value) {
@@ -118,7 +136,35 @@ class InventoryPreviewPanel : JPanel() {
                 val index = slotIndexAt(currentModel, logicalPoint) ?: return
                 onSlotClicked?.invoke(index)
             }
+
+            override fun mouseExited(e: MouseEvent) = updateHoveredSlot(null)
         })
+        addMouseMotionListener(object : MouseMotionAdapter() {
+            override fun mouseMoved(e: MouseEvent) {
+                val currentModel = model
+                if (currentModel == null) {
+                    updateHoveredSlot(null)
+                    return
+                }
+                val logicalPoint = Point((e.x / zoom).toInt(), (e.y / zoom).toInt())
+                updateHoveredSlot(slotIndexAt(currentModel, logicalPoint))
+            }
+        })
+    }
+
+    private fun updateHoveredSlot(index: Int?) {
+        if (hoveredSlotIndex == index) return
+        hoveredSlotIndex = index
+        refreshHoverCursor()
+        repaint()
+    }
+
+    // A slot only gets the pointer cursor in interactive mode, and only when it actually has a
+    // click handler to simulate - otherwise the cursor stays the default arrow, same as clicking
+    // a slot with nothing bound to it silently does nothing.
+    private fun refreshHoverCursor() {
+        val isClickable = interactiveMode && hoveredSlotIndex?.let { model?.clickActions?.containsKey(it) } == true
+        cursor = if (isClickable) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
     }
 
     fun setModel(newModel: PreviewModel?) {
@@ -401,6 +447,11 @@ class InventoryPreviewPanel : JPanel() {
             else -> slot?.amount?.takeIf { it > 1 }?.toString()
         }
         stackCountLabel?.let { paintStackCount(g, it, x, y, size) }
+
+        if (interactiveMode && index == hoveredSlotIndex) {
+            g.color = SLOT_HOVER_OVERLAY
+            g.fillRect(x + 1, y + 1, size - 2, size - 2)
+        }
 
         if (index in highlightedSlotIndices) {
             g.color = JBColor.BLUE
