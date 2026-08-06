@@ -26,13 +26,11 @@ class MinecraftIconSettingsConfigurable : Configurable {
         homeField = field
 
         val comment = JLabel(
-            "<html>Used to render real item icons in the inventory preview by reading textures from an " +
-                "installed client jar. Leave empty to auto-detect the platform default " +
-                "(%APPDATA%/.minecraft, ~/.minecraft, or ~/Library/Application Support/minecraft).</html>",
+            "<html>Used to render real item icons in the inventory preview.<br/>Leave empty to auto-detect the platform default.</html>",
         )
 
         return FormBuilder.createFormBuilder()
-            .addLabeledComponent("Minecraft home (.minecraft) directory:", field)
+            .addLabeledComponent("Minecraft home:", field)
             .addComponentToRightColumn(comment)
             .addComponentFillVertically(JLabel(), 0)
             .panel

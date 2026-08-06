@@ -44,6 +44,19 @@ the user's code, so anything that depends on runtime state can only ever be appr
   forms — see limitations below for the heuristic these rely on.
 - `renderWith(...)` / `onRender(...)` render as a distinct "dynamic" marker rather than being
   evaluated.
+- `availableSlot()` / `availableSlot(item)` / `availableSlot((index, builder) -> ...)`, placed by
+  mirroring the runtime's own next-available-slot algorithm (`AvailableSlotInterceptor`) against
+  what's already been statically extracted — see limitations below for what this can't account for.
+- Stack count: `new ItemStack(Material.X, amount)`'s second constructor argument, rendered as the
+  vanilla bottom-right count badge when it resolves to a literal or a local variable that's never
+  reassigned (so its initializer really is its value everywhere it's read), and is greater than `1`
+  (vanilla doesn't badge a single item, and a resolved `0`/negative amount is never shown either).
+  Inside an `availableSlot(...)` loop specifically (see `ForLoopAnalyzer`), an amount that's
+  literally the loop's own counter is resolved per iteration - `for (int i = 1; i <= 5; i++)
+  render.availableSlot(new ItemStack(Material.X, i))` badges `1` through `5` across the five slots
+  it actually claims, not one repeated number. Any other variable that genuinely differs per read -
+  a loop counter used some other way, or any other reassigned local - can't be reduced to a single
+  number, so it renders as `?` instead of a wrong frozen value.
 
 **Rendering**
 - `CHEST`-type views render on top of bundled sprite frames (`resources/assets/sprites/chest-1.png`
@@ -96,9 +109,19 @@ the user's code, so anything that depends on runtime state can only ever be appr
   loop) and what else has already filled slots. There's no loop-iteration analysis, so every call
   site is treated as if it fills the entire row/column. This matches the common idiom (see
   `RowColumnSample.java`) but is wrong for genuine single-slot usage.
-- **`availableSlot()` and `resultSlot()` are not placed.** Their position isn't statically knowable
-  (or, for `resultSlot()`, varies per `ViewType`), so items placed through them don't appear in the
-  preview at all.
+- **`availableSlot()` is placed with a heuristic, not a runtime-exact simulation.** Its real slot
+  is resolved procedurally at render time against the live container (which slots are interactable,
+  which already have an item) — the preview instead mirrors just the two algorithms
+  `AvailableSlotInterceptor` itself uses (sequential fill from slot 0, or fill of the layout's
+  reserved `'O'` positions when a `layout(...)` is set) against what's statically known: explicit
+  `slot`/`layoutSlot`/`row`/`column` bindings and the layout grid. It doesn't model per-slot
+  interactability for irregular container types. A call site directly inside a simple bounded
+  counting loop (`for (int i = a; i <op> b; i++`/`i--)`, variable on the left of the condition) is
+  counted once per statically-known iteration, since that's the idiomatic way to batch-fill
+  available slots; anything else - nested loops, for-each, while, a non-`i++`/`i--` step - falls
+  back to counting the call once, same as a bare call outside a loop.
+- **`resultSlot()` is not placed.** Its position varies per `ViewType` (a pagination-only concept)
+  and isn't modeled at all, so items placed through it don't appear in the preview.
 - **Extraction isn't scoped to a single view's methods.** The extractor walks the whole file's UAST
   tree for recognizable config/item calls rather than precisely following `onInit`/`onFirstRender`
   boundaries. In practice this only matters for files with multiple unrelated views or stray calls

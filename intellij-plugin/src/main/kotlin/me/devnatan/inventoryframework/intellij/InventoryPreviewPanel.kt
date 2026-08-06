@@ -10,6 +10,8 @@ import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.geom.AffineTransform
+import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import javax.swing.JPanel
@@ -43,6 +45,10 @@ private const val HOPPER_SPRITE_ORIGIN_X = 43
 private const val HOPPER_SPRITE_ORIGIN_Y = 19
 private const val TITLE_FONT_SIZE = BASE_TITLE_FONT_SIZE * SPRITE_SCALE
 private const val SLOT_NUMBER_FONT_SIZE = BASE_SLOT_NUMBER_FONT_SIZE * SPRITE_SCALE - 2f
+// Vanilla's stack-count digits are small, tucked into an icon's corner - notably smaller than the
+// debug slot-number overlay above, which is deliberately oversized for dev-tool readability rather
+// than game fidelity.
+private const val STACK_COUNT_FONT_SIZE = 10f * SPRITE_SCALE
 
 // Vanilla Minecraft renders container titles in a fixed dark gray (0x404040) regardless of
 // any theme, since it's part of the emulated game screen rather than IDE chrome.
@@ -79,6 +85,7 @@ private val minecraftFont: Font? by lazy {
 
 private val titleFont: Font? by lazy { minecraftFont?.deriveFont(Font.PLAIN, TITLE_FONT_SIZE) }
 private val slotNumberFont: Font? by lazy { minecraftFont?.deriveFont(Font.PLAIN, SLOT_NUMBER_FONT_SIZE) }
+private val stackCountFont: Font? by lazy { minecraftFont?.deriveFont(Font.PLAIN, STACK_COUNT_FONT_SIZE) }
 
 class InventoryPreviewPanel : JPanel() {
 
@@ -161,14 +168,41 @@ class InventoryPreviewPanel : JPanel() {
         revalidate()
     }
 
+    private fun applyTextRenderingHints(g: Graphics2D) {
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF)
+        g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
+    }
+
+    // Renders text at a pixel-accurate size and position regardless of the current zoom, leaving
+    // g.font/g.transform exactly as they were on return. Drawing text directly under the panel's
+    // g.scale(zoom, zoom) transform (zoom isn't always an integer: 0.5, 0.75, 1.25, 1.5, 3.0, ...)
+    // rasterizes a glyph hinted for the font's base size through that transform - with
+    // antialiasing off (kept off so the Minecraft font's blocky look stays crisp rather than
+    // turning blurry), the resulting on/off pixel rounding lands differently at each zoom level,
+    // which is what made the same glyph look bolder or thinner depending on zoom. Deriving the
+    // font at its real target size and drawing in screen space - rather than letting the
+    // transform scale up a rasterization done for a different size - keeps every zoom level
+    // equally crisp, the same way it already looked at zoom = 1.0.
+    private fun drawText(g: Graphics2D, text: String, logicalX: Int, logicalY: Int) {
+        val scale = g.transform.scaleX
+        val screenPoint = g.transform.transform(Point2D.Double(logicalX.toDouble(), logicalY.toDouble()), null)
+        val logicalTransform = g.transform
+        val logicalFont = g.font
+        g.transform = AffineTransform()
+        g.font = logicalFont.deriveFont((logicalFont.size2D * scale).toFloat())
+        g.drawString(text, screenPoint.x.toFloat(), screenPoint.y.toFloat())
+        g.transform = logicalTransform
+        g.font = logicalFont
+    }
+
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
-        (g as Graphics2D).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF)
+        applyTextRenderingHints(g as Graphics2D)
         g.scale(zoom, zoom)
         val currentModel = model
         if (currentModel == null) {
             g.color = JBColor.foreground()
-            g.drawString("Unable to analyze this view", MIN_MARGIN, 20)
+            drawText(g, "Unable to analyze this view", MIN_MARGIN, 20)
             return
         }
 
@@ -184,7 +218,7 @@ class InventoryPreviewPanel : JPanel() {
 
     // Drawn after the grid/frame so the text sits on top of it, matching the in-game
     // layering where the title is part of the container's foreground, not a separate header.
-    private fun paintTitle(g: Graphics, model: PreviewModel, originX: Int, originY: Int) {
+    private fun paintTitle(g: Graphics2D, model: PreviewModel, originX: Int, originY: Int) {
         val title = model.title ?: "(dynamic title)"
         g.color = TITLE_COLOR
         val originalFont = g.font
@@ -194,7 +228,7 @@ class InventoryPreviewPanel : JPanel() {
         } else {
             (originX + TITLE_INSET_X) to (originY - TITLE_GRID_GAP - g.fontMetrics.descent)
         }
-        g.drawString(title, x, y)
+        drawText(g, title, x, y)
         g.font = originalFont
     }
 
@@ -279,8 +313,8 @@ class InventoryPreviewPanel : JPanel() {
         return index.takeIf { it < model.maxSize }
     }
 
-    private fun paintSpriteGrid(g: Graphics, model: PreviewModel, sprite: ContainerSprite, originX: Int, originY: Int) {
-        (g as Graphics2D).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
+    private fun paintSpriteGrid(g: Graphics2D, model: PreviewModel, sprite: ContainerSprite, originX: Int, originY: Int) {
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
         g.drawImage(sprite.image, originX, originY, sprite.image.width * SPRITE_SCALE, sprite.image.height * SPRITE_SCALE, null)
 
         val (slotOriginX, slotOriginY, slotSize) = slotGeometry(model, originX, originY)
@@ -291,7 +325,7 @@ class InventoryPreviewPanel : JPanel() {
         }
     }
 
-    private fun paintDrawnGrid(g: Graphics, model: PreviewModel, originX: Int, originY: Int) {
+    private fun paintDrawnGrid(g: Graphics2D, model: PreviewModel, originX: Int, originY: Int) {
         val (slotOriginX, slotOriginY, slotSize) = slotGeometry(model, originX, originY)
         forEachSlot(model) { row, col ->
             val x = slotOriginX + col * slotSize
@@ -310,7 +344,7 @@ class InventoryPreviewPanel : JPanel() {
     }
 
     private fun paintSlotOverlay(
-        g: Graphics,
+        g: Graphics2D,
         model: PreviewModel,
         row: Int,
         col: Int,
@@ -348,16 +382,25 @@ class InventoryPreviewPanel : JPanel() {
         }
 
         if (icon != null) {
-            (g as Graphics2D).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
             val inset = size / 16
             g.drawImage(icon, x + inset, y + inset, size - inset * 2, size - inset * 2, null)
         }
 
         g.color = Color.BLACK
         when {
-            slot?.dynamic == true -> g.drawString("?", x + size / 2 - 3, y + size / 2 + 5)
-            slot?.material != null && icon == null -> g.drawString(abbreviateMaterial(slot.material), x + 3, y + size - 4)
+            slot?.dynamic == true -> drawText(g, "?", x + size / 2 - 3, y + size / 2 + 5)
+            slot?.material != null && icon == null -> drawText(g, abbreviateMaterial(slot.material), x + 3, y + size - 4)
         }
+
+        // Vanilla only badges a stack when it holds more than one item - a bare "1" (or an invalid
+        // 0/negative amount) is never shown - but a genuinely unresolvable amount (a reassigned/loop
+        // variable) still renders as "?" rather than looking identical to "no count at all".
+        val stackCountLabel = when {
+            slot?.amountDynamic == true -> "?"
+            else -> slot?.amount?.takeIf { it > 1 }?.toString()
+        }
+        stackCountLabel?.let { paintStackCount(g, it, x, y, size) }
 
         if (index in highlightedSlotIndices) {
             g.color = JBColor.BLUE
@@ -373,9 +416,25 @@ class InventoryPreviewPanel : JPanel() {
             g.color = SLOT_NUMBER_BACKGROUND
             g.fillRect(x + 1, y + 1, fm.stringWidth(label) + 4, fm.ascent + 3)
             g.color = Color.WHITE
-            g.drawString(label, x + 3, y + fm.ascent + 1)
+            drawText(g, label, x + 3, y + fm.ascent + 1)
             g.font = originalFont
         }
+    }
+
+    // Mirrors vanilla's stack-size badge: bottom-right corner, white text over a 1px black shadow
+    // rather than a background box (unlike the debug slot-number overlay above, which is IDE
+    // chrome, not part of the emulated game screen).
+    private fun paintStackCount(g: Graphics2D, label: String, x: Int, y: Int, size: Int) {
+        val originalFont = g.font
+        g.font = stackCountFont ?: g.font.deriveFont(STACK_COUNT_FONT_SIZE)
+        val fm = g.fontMetrics
+        val labelX = x + size - fm.stringWidth(label)
+        val labelY = y + size - 2
+        g.color = Color.BLACK
+        drawText(g, label, labelX + 2, labelY + 2)
+        g.color = Color.WHITE
+        drawText(g, label, labelX, labelY)
+        g.font = originalFont
     }
 
     private fun computePreferredSize(forModel: PreviewModel?): Dimension {
@@ -396,7 +455,7 @@ class InventoryPreviewPanel : JPanel() {
         val image = BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_ARGB)
         val g = image.createGraphics()
         try {
-            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF)
+            applyTextRenderingHints(g)
             val (originX, originY) = exportOrigin(currentModel)
             val sprite = containerSpriteFor(currentModel)
             if (sprite != null) {
