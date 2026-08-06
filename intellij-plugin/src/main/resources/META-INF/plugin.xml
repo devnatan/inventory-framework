@@ -1,5 +1,5 @@
 <idea-plugin>
-    <id>me.devnatan.inventoryframework.intellij</id>
+    <id>me.devnatan.inventoryframework</id>
     <name>Inventory Framework</name>
     <vendor url="https://github.com/DevNatan/inventory-framework">DevNatan</vendor>
 
