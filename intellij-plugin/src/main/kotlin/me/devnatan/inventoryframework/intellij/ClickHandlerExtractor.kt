@@ -1,8 +1,10 @@
 package me.devnatan.inventoryframework.intellij
 
+import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiField
 import org.jetbrains.uast.UBinaryExpression
 import org.jetbrains.uast.UCallExpression
+import org.jetbrains.uast.UClassLiteralExpression
 import org.jetbrains.uast.UExpression
 import org.jetbrains.uast.UFile
 import org.jetbrains.uast.ULambdaExpression
@@ -18,6 +20,7 @@ private const val FRAMEWORK_PACKAGE_PREFIX = "me.devnatan.inventoryframework"
 private const val ON_CLICK_METHOD = "onClick"
 private const val AVAILABLE_SLOT_METHOD = "availableSlot"
 private val ROW_COLUMN_FACTORY_METHODS = setOf("row", "firstRow", "lastRow", "column", "firstColumn", "lastColumn")
+private val OPEN_VIEW_METHODS = setOf("openForPlayer", "openForEveryone")
 
 class ClickActionExtractionResult(
     val indexed: Map<Int, PreviewClickAction>,
@@ -111,6 +114,9 @@ object ClickHandlerExtractor {
     ): PreviewClickAction {
         val statement = singleBodyExpression(lambda.body) ?: return PreviewClickAction.Unsupported
         val call = asCallExpression(statement) ?: return PreviewClickAction.Unsupported
+
+        matchOpenViewAction(call)?.let { return it }
+
         val receiver = call.receiver?.skipParenthesizedExprDown() as? UReferenceExpression
             ?: return PreviewClickAction.Unsupported
         val field = receiver.resolve() as? PsiField ?: return PreviewClickAction.Unsupported
@@ -170,6 +176,21 @@ object ClickHandlerExtractor {
         }
 
         return null
+    }
+
+    // `click.openForPlayer(OtherView.class)` / `click.openForEveryone(OtherView.class)` - unlike
+    // the state-mutating shapes above, the receiver here is the click context itself rather than a
+    // tracked state field, so it's matched independently before that field-resolution path runs.
+    private fun matchOpenViewAction(call: UCallExpression): PreviewClickAction.OpenView? {
+        if (call.methodName !in OPEN_VIEW_METHODS) return null
+        val method = call.resolve() ?: return null
+        val declaringClass = method.containingClass?.qualifiedName ?: return null
+        if (!declaringClass.startsWith(FRAMEWORK_PACKAGE_PREFIX)) return null
+        val classLiteral = call.valueArguments.getOrNull(0)?.skipParenthesizedExprDown() as? UClassLiteralExpression
+            ?: return null
+        val targetClass = (classLiteral.type as? PsiClassType)?.resolve() ?: return null
+        val fqn = targetClass.qualifiedName ?: return null
+        return PreviewClickAction.OpenView(fqn)
     }
 
     private fun isGetCallOn(expr: UExpression, field: PsiField): Boolean {

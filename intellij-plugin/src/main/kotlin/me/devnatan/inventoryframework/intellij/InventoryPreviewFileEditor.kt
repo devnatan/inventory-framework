@@ -7,12 +7,14 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ToggleAction
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
@@ -22,9 +24,12 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.pom.Navigatable
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiTreeChangeAdapter
 import com.intellij.psi.PsiTreeChangeEvent
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Alarm
@@ -42,6 +47,8 @@ import javax.swing.JPanel
 private const val REFRESH_DEBOUNCE_MILLIS = 300
 private const val TOOLBAR_PLACE = "InventoryFramework.PreviewToolbar"
 private const val COPY_FEEDBACK_FADEOUT_MILLIS = 1500
+
+private class ResolvedViewClass(val targetFile: VirtualFile?, val navigatable: Navigatable?)
 
 private class ImageTransferable(private val image: Image) : Transferable {
     override fun getTransferDataFlavors(): Array<DataFlavor> = arrayOf(DataFlavor.imageFlavor)
@@ -69,8 +76,16 @@ class InventoryPreviewFileEditor(
     private val stateInlays = mutableListOf<Inlay<*>>()
     private val rootComponent: JComponent by lazy { buildComponent() }
 
+    // Set when this file's preview was opened by simulating an "open view" click from another
+    // view's preview - lets Undo fall back to "go back to that view" once there's no more local
+    // interaction state left to undo. See PreviewNavigationHistory.
+    private var backNavigationFile: VirtualFile? = null
+
     init {
         panel.onSlotClicked = ::onSlotClicked
+        val navigationHistory = PreviewNavigationHistory.getInstance(project)
+        navigationHistory.register(file, this)
+        navigationHistory.consumePendingArrival(file)?.let(::onArrivedViaInteractiveNavigation)
         // The editor can be reconstructed (e.g. restoring last-open tabs on startup) while the
         // project is still indexing; retry once smart mode is reached instead of caching a
         // permanent extraction failure from that race.
@@ -156,6 +171,7 @@ class InventoryPreviewFileEditor(
         when (val action = model.clickActions[index]) {
             null -> return
             PreviewClickAction.Unsupported -> showUnsupportedInteractionBalloon()
+            is PreviewClickAction.OpenView -> navigateToViewClass(action.targetClassFqn)
             else -> {
                 interactionState.apply(action)
                 panel.setModel(interactionState.resolve(model))
@@ -165,11 +181,55 @@ class InventoryPreviewFileEditor(
         }
     }
 
+    // Simulating an actual view switch would mean building and rendering an entirely separate
+    // preview model, so the closest useful stand-in for "this click opens another view" is
+    // jumping straight to that view's source, mirroring what the click would do at runtime.
+    private fun navigateToViewClass(targetClassFqn: String) {
+        // findClass/navigationElement/containingFile touch the PSI/stub index, which asserts read
+        // access even from the EDT - the mouse-click callback that reaches here doesn't hold one
+        // implicitly.
+        val resolved = ReadAction.compute<ResolvedViewClass, Throwable> {
+            val psiClass = JavaPsiFacade.getInstance(project).findClass(targetClassFqn, GlobalSearchScope.allScope(project))
+            ResolvedViewClass(psiClass?.containingFile?.virtualFile, psiClass?.navigationElement as? Navigatable)
+        }
+        val navigatable = resolved.navigatable
+        if (navigatable == null) {
+            showViewNotFoundBalloon(targetClassFqn)
+            return
+        }
+        // Recorded before navigating (rather than from the destination editor's init) since the
+        // target's tab may already be open, in which case no init ever runs for this jump.
+        resolved.targetFile?.let { PreviewNavigationHistory.getInstance(project).recordOpenViewNavigation(file, it) }
+        navigatable.navigate(true)
+    }
+
+    // Called by PreviewNavigationHistory, either synchronously from navigateToViewClass (target
+    // tab already open) or from this editor's own init (target tab just now being created) -
+    // either way, arriving here via a simulated "open view" click should carry interactive mode
+    // forward and let Undo hop back once there's nothing local left to undo.
+    fun onArrivedViaInteractiveNavigation(fromFile: VirtualFile) {
+        backNavigationFile = fromFile
+        if (interactiveModeEnabled) return
+        interactiveModeEnabled = true
+        panel.interactiveMode = true
+        refreshStateHints()
+    }
+
+    private fun showViewNotFoundBalloon(targetClassFqn: String) {
+        val simpleName = targetClassFqn.substringAfterLast('.')
+        JBPopupFactory.getInstance()
+            .createHtmlTextBalloonBuilder("Could not find view class $simpleName", MessageType.WARNING, null)
+            .setFadeoutTime(COPY_FEEDBACK_FADEOUT_MILLIS.toLong())
+            .createBalloon()
+            .show(RelativePoint.getCenterOf(panel), Balloon.Position.above)
+    }
+
     private fun showSimulatedActionBalloon(action: PreviewClickAction) {
         val (stateId, description) = when (action) {
             is PreviewClickAction.ToggleBoolean -> action.stateId to "toggled"
             is PreviewClickAction.Delta -> action.stateId to "changed by ${if (action.delta >= 0) "+" else ""}${action.delta}"
             is PreviewClickAction.SetLiteral -> action.stateId to "set to ${action.value}"
+            is PreviewClickAction.OpenView -> return
             PreviewClickAction.Unsupported -> return
         }
         val fieldName = stateId.substringAfterLast('#')
@@ -180,18 +240,32 @@ class InventoryPreviewFileEditor(
             .show(RelativePoint.getCenterOf(panel), Balloon.Position.above)
     }
 
+    // Called whenever interactive mode is toggled (on or off) - either direction starts a fresh
+    // interactive session, so the "came from" link left over from a previous session's navigation
+    // shouldn't carry over into this one.
     private fun resetInteraction() {
         interactionState.reset(currentModel)
         currentModel?.let { panel.setModel(interactionState.resolve(it)) }
+        backNavigationFile = null
         refreshStateHints()
     }
 
+    // Local state takes priority: only once there's nothing left to undo in this view does Undo
+    // fall back to "go back to the view whose click sent us here", chaining a multi-hop navigation
+    // (A opens B opens C) back one step at a time rather than jumping straight to A from C.
     private fun undoLastInteraction() {
-        val model = currentModel ?: return
-        if (interactionState.undo()) {
+        val model = currentModel
+        if (model != null && interactionState.undo()) {
             panel.setModel(interactionState.resolve(model))
             refreshStateHints()
+            return
         }
+        backNavigationFile?.let(::navigateBackToFile)
+    }
+
+    private fun navigateBackToFile(target: VirtualFile) {
+        if (!target.isValid) return
+        OpenFileDescriptor(project, target).navigate(true)
     }
 
     private fun showUnsupportedInteractionBalloon() {
@@ -264,6 +338,7 @@ class InventoryPreviewFileEditor(
                 override fun isSelected(e: AnActionEvent) = interactiveModeEnabled
                 override fun setSelected(e: AnActionEvent, state: Boolean) {
                     interactiveModeEnabled = state
+                    panel.interactiveMode = state
                     resetInteraction()
                 }
                 override fun update(e: AnActionEvent) {
@@ -277,7 +352,7 @@ class InventoryPreviewFileEditor(
         group.add(object : AnAction("Undo Last Interaction", "Revert the last simulated click", AllIcons.Actions.Undo) {
             override fun actionPerformed(e: AnActionEvent) = undoLastInteraction()
             override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = interactiveModeEnabled && interactionState.canUndo()
+                e.presentation.isEnabled = interactiveModeEnabled && (interactionState.canUndo() || backNavigationFile != null)
             }
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
         })
@@ -319,6 +394,7 @@ class InventoryPreviewFileEditor(
     override fun getFile(): VirtualFile = file
 
     override fun dispose() {
+        PreviewNavigationHistory.getInstance(project).unregister(file, this)
         stateInlays.forEach { it.dispose() }
         stateInlays.clear()
     }

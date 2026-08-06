@@ -54,6 +54,9 @@ class PreviewInteractionState {
                 values[action.stateId] = action.value
                 true
             }
+            // Navigation is handled by the caller before apply() is ever reached for this action -
+            // it doesn't touch simulated state, so there's nothing to undo.
+            is PreviewClickAction.OpenView -> false
             PreviewClickAction.Unsupported -> false
         }
         if (changed) history.addLast(beforeChange)

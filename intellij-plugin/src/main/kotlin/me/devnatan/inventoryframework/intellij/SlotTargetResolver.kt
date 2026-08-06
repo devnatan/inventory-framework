@@ -32,12 +32,21 @@ internal object SlotTargetResolver {
     private fun resolveDirect(call: UCallExpression, rows: Int, columns: Int): SlotTarget? {
         val args = call.valueArguments
         return when (call.methodName) {
+            // The 2-arg shape is ambiguous between two overloads that only differ by the second
+            // parameter's type: slot(int row, int column) and the Bukkit slot(int slot, ItemStack
+            // item) sugar. evaluate() only folds compile-time constants, so a genuine row/column
+            // pair resolves both to Int; an item argument never does, which is what tells the two
+            // apart here - falling back to treating the first argument as a raw slot index.
             "slot" -> when (args.size) {
                 1 -> (args[0].evaluate() as? Int)?.let { SlotTarget.Indices(listOf(it)) }
                 2 -> {
-                    val row = args[0].evaluate() as? Int ?: return null
-                    val column = args[1].evaluate() as? Int ?: return null
-                    slotIndex(row, column, rows, columns)?.let { SlotTarget.Indices(listOf(it)) }
+                    val first = args[0].evaluate() as? Int ?: return null
+                    val column = args[1].evaluate() as? Int
+                    if (column != null) {
+                        slotIndex(first, column, rows, columns)?.let { SlotTarget.Indices(listOf(it)) }
+                    } else {
+                        SlotTarget.Indices(listOf(first))
+                    }
                 }
                 else -> null
             }
