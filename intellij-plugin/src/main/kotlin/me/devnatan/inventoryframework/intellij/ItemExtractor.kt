@@ -121,10 +121,19 @@ object ItemExtractor {
     private fun resolveDirectItemCall(node: UCallExpression, rows: Int, columns: Int): Pair<SlotTarget, UExpression>? {
         val args = node.valueArguments
         return when (node.methodName) {
-            "slot" -> if (args.size == 2) {
-                val index = args[0].evaluate() as? Int ?: return null
-                SlotTarget.Indices(listOf(index)) to args[1]
-            } else null
+            "slot" -> when (args.size) {
+                2 -> {
+                    val index = args[0].evaluate() as? Int ?: return null
+                    SlotTarget.Indices(listOf(index)) to args[1]
+                }
+                3 -> {
+                    val row = args[0].evaluate() as? Int ?: return null
+                    val column = args[1].evaluate() as? Int ?: return null
+                    val index = SlotTargetResolver.slotIndex(row, column, rows, columns) ?: return null
+                    SlotTarget.Indices(listOf(index)) to args[2]
+                }
+                else -> null
+            }
             "firstSlot" -> if (args.size == 1) SlotTarget.Indices(listOf(0)) to args[0] else null
             "lastSlot" -> if (args.size == 1) SlotTarget.Indices(listOf(rows * columns - 1)) to args[0] else null
             "layoutSlot" -> if (args.size == 2) {
