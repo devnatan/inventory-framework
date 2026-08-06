@@ -36,6 +36,7 @@ include(
     "inventory-framework-platform-bukkit",
     "inventory-framework-platform-minestom",
     "inventory-framework-anvil-input",
+    "inventory-framework-inline",
     "example-paper",
     "example-minestom",
     "intellij-plugin"

@@ -12,6 +12,7 @@ inventoryFramework {
 dependencies {
     api(projects.inventoryFrameworkPlatform)
     runtimeOnly(projects.inventoryFrameworkAnvilInput)
+    runtimeOnly(projects.inventoryFrameworkInline)
     compileOnly(libs.spigot)
     testCompileOnly(libs.spigot)
     testRuntimeOnly(libs.spigot)
