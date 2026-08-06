@@ -25,7 +25,15 @@ internal object SlotTargetResolver {
     private fun resolveDirect(call: UCallExpression, rows: Int, columns: Int): SlotTarget? {
         val args = call.valueArguments
         return when (call.methodName) {
-            "slot" -> (args.getOrNull(0)?.evaluate() as? Int)?.let { SlotTarget.Indices(listOf(it)) }
+            "slot" -> when (args.size) {
+                1 -> (args[0].evaluate() as? Int)?.let { SlotTarget.Indices(listOf(it)) }
+                2 -> {
+                    val row = args[0].evaluate() as? Int ?: return null
+                    val column = args[1].evaluate() as? Int ?: return null
+                    slotIndex(row, column, rows, columns)?.let { SlotTarget.Indices(listOf(it)) }
+                }
+                else -> null
+            }
             "firstSlot" -> SlotTarget.Indices(listOf(0))
             "lastSlot" -> SlotTarget.Indices(listOf(rows * columns - 1))
             "layoutSlot" -> (args.getOrNull(0)?.evaluate() as? Char)?.let { SlotTarget.Layout(it) }
@@ -37,6 +45,13 @@ internal object SlotTargetResolver {
             "lastColumn" -> columnIndices(columns, rows, columns)
             else -> null
         }
+    }
+
+    // Mirrors SlotConverter#convertSlot in the core module: 1-indexed row/column to a 0-indexed slot.
+    fun slotIndex(row1Indexed: Int, column1Indexed: Int, rows: Int, columns: Int): Int? {
+        if (row1Indexed !in 1..rows) return null
+        if (column1Indexed !in 1..columns) return null
+        return (row1Indexed - 1) * columns + (column1Indexed - 1)
     }
 
     fun rowIndices(row1Indexed: Int, rows: Int, columns: Int): SlotTarget.Indices? {
