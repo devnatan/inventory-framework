@@ -32,10 +32,15 @@ private const val TITLE_INSET_X = 8
 private const val TITLE_INSET_Y = 6
 
 private const val CHEST_TYPE_NAME = "CHEST"
+private const val HOPPER_TYPE_NAME = "HOPPER"
 private const val SPRITE_SCALE = 2
 private const val SPRITE_SLOT_SIZE = 18
-private const val SPRITE_ORIGIN_X = 7
-private const val SPRITE_ORIGIN_Y = 17
+private const val CHEST_SPRITE_ORIGIN_X = 7
+private const val CHEST_SPRITE_ORIGIN_Y = 17
+// The hopper's single row of slots sits centered in its GUI texture rather than
+// flush against the left edge like the chest's, so it needs its own origin.
+private const val HOPPER_SPRITE_ORIGIN_X = 43
+private const val HOPPER_SPRITE_ORIGIN_Y = 19
 private const val TITLE_FONT_SIZE = BASE_TITLE_FONT_SIZE * SPRITE_SCALE
 private const val SLOT_NUMBER_FONT_SIZE = BASE_SLOT_NUMBER_FONT_SIZE * SPRITE_SCALE - 2f
 
@@ -53,6 +58,14 @@ private val chestSprites: Map<Int, BufferedImage?> by lazy {
         InventoryPreviewPanel::class.java.getResourceAsStream("/assets/sprites/chest-$rows.png")?.use(ImageIO::read)
     }
 }
+
+private val hopperSprite: BufferedImage? by lazy {
+    InventoryPreviewPanel::class.java.getResourceAsStream("/assets/sprites/hopper.png")?.use(ImageIO::read)
+}
+
+// Bundles a sprite image with the pixel offset/size of its slot grid, since that grid isn't
+// at the same position in every container's texture (see HOPPER_SPRITE_ORIGIN_X/Y above).
+private data class ContainerSprite(val image: BufferedImage, val originX: Int, val originY: Int, val slotSize: Int)
 
 // Mirrors the Minecraft default font's blocky look; null if the resource is missing or the
 // platform rejects the font file, in which case callers fall back to the panel's default font.
@@ -160,7 +173,7 @@ class InventoryPreviewPanel : JPanel() {
         }
 
         val (originX, originY) = gridOrigin(currentModel)
-        val sprite = chestSpriteFor(currentModel)
+        val sprite = containerSpriteFor(currentModel)
         if (sprite != null) {
             paintSpriteGrid(g, currentModel, sprite, originX, originY)
         } else {
@@ -176,7 +189,7 @@ class InventoryPreviewPanel : JPanel() {
         g.color = TITLE_COLOR
         val originalFont = g.font
         titleFont?.let { g.font = it }
-        val (x, y) = if (chestSpriteFor(model) != null) {
+        val (x, y) = if (containerSpriteFor(model) != null) {
             (originX + TITLE_INSET_X * SPRITE_SCALE) to (originY + TITLE_INSET_Y * SPRITE_SCALE - TITLE_GRID_GAP + g.fontMetrics.ascent)
         } else {
             (originX + TITLE_INSET_X) to (originY - TITLE_GRID_GAP - g.fontMetrics.descent)
@@ -185,15 +198,20 @@ class InventoryPreviewPanel : JPanel() {
         g.font = originalFont
     }
 
-    private fun chestSpriteFor(model: PreviewModel): BufferedImage? {
-        if (model.viewTypeName != CHEST_TYPE_NAME) return null
-        return chestSprites[model.rows.coerceIn(1, 6)]
+    private fun containerSpriteFor(model: PreviewModel): ContainerSprite? = when (model.viewTypeName) {
+        CHEST_TYPE_NAME -> chestSprites[model.rows.coerceIn(1, 6)]?.let {
+            ContainerSprite(it, CHEST_SPRITE_ORIGIN_X, CHEST_SPRITE_ORIGIN_Y, SPRITE_SLOT_SIZE)
+        }
+        HOPPER_TYPE_NAME -> hopperSprite?.let {
+            ContainerSprite(it, HOPPER_SPRITE_ORIGIN_X, HOPPER_SPRITE_ORIGIN_Y, SPRITE_SLOT_SIZE)
+        }
+        else -> null
     }
 
     private fun gridContentSize(model: PreviewModel): Dimension {
-        val sprite = chestSpriteFor(model)
+        val sprite = containerSpriteFor(model)
         return if (sprite != null) {
-            Dimension(sprite.width * SPRITE_SCALE, sprite.height * SPRITE_SCALE)
+            Dimension(sprite.image.width * SPRITE_SCALE, sprite.image.height * SPRITE_SCALE)
         } else {
             Dimension(model.columns * (SLOT_SIZE + SLOT_GAP), model.rows * (SLOT_SIZE + SLOT_GAP))
         }
@@ -219,7 +237,7 @@ class InventoryPreviewPanel : JPanel() {
     // reserves room for the title in its own texture, so only the frame-less fallback needs
     // the extra top gap.
     private fun logicalOrigin(model: PreviewModel): Pair<Int, Int> {
-        val topReserve = if (chestSpriteFor(model) != null) MIN_MARGIN else nonSpriteTopReserve()
+        val topReserve = if (containerSpriteFor(model) != null) MIN_MARGIN else nonSpriteTopReserve()
         return MIN_MARGIN to topReserve
     }
 
@@ -242,9 +260,9 @@ class InventoryPreviewPanel : JPanel() {
 
     // Shared by painting and click hit-testing so the two can never drift apart.
     private fun slotGeometry(model: PreviewModel, originX: Int, originY: Int): Triple<Int, Int, Int> {
-        val sprite = chestSpriteFor(model)
+        val sprite = containerSpriteFor(model)
         return if (sprite != null) {
-            Triple(originX + SPRITE_ORIGIN_X * SPRITE_SCALE, originY + SPRITE_ORIGIN_Y * SPRITE_SCALE, SPRITE_SLOT_SIZE * SPRITE_SCALE)
+            Triple(originX + sprite.originX * SPRITE_SCALE, originY + sprite.originY * SPRITE_SCALE, sprite.slotSize * SPRITE_SCALE)
         } else {
             Triple(originX, originY, SLOT_SIZE + SLOT_GAP)
         }
@@ -261,9 +279,9 @@ class InventoryPreviewPanel : JPanel() {
         return index.takeIf { it < model.maxSize }
     }
 
-    private fun paintSpriteGrid(g: Graphics, model: PreviewModel, sprite: BufferedImage, originX: Int, originY: Int) {
+    private fun paintSpriteGrid(g: Graphics, model: PreviewModel, sprite: ContainerSprite, originX: Int, originY: Int) {
         (g as Graphics2D).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
-        g.drawImage(sprite, originX, originY, sprite.width * SPRITE_SCALE, sprite.height * SPRITE_SCALE, null)
+        g.drawImage(sprite.image, originX, originY, sprite.image.width * SPRITE_SCALE, sprite.image.height * SPRITE_SCALE, null)
 
         val (slotOriginX, slotOriginY, slotSize) = slotGeometry(model, originX, originY)
         forEachSlot(model) { row, col ->
@@ -380,7 +398,7 @@ class InventoryPreviewPanel : JPanel() {
         try {
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF)
             val (originX, originY) = exportOrigin(currentModel)
-            val sprite = chestSpriteFor(currentModel)
+            val sprite = containerSpriteFor(currentModel)
             if (sprite != null) {
                 paintSpriteGrid(g, currentModel, sprite, originX, originY)
             } else {
@@ -394,7 +412,7 @@ class InventoryPreviewPanel : JPanel() {
     }
 
     private fun exportOrigin(model: PreviewModel): Pair<Int, Int> {
-        val topReserve = if (chestSpriteFor(model) != null) 0 else nonSpriteTitleReserve()
+        val topReserve = if (containerSpriteFor(model) != null) 0 else nonSpriteTitleReserve()
         return 0 to topReserve
     }
 
