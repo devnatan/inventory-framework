@@ -534,7 +534,7 @@ public abstract class PlatformView<
      *
      * @param context The context.
      * @param viewer  Who was added to the context.
-     * @param data    Initial data set wen the viewer was added.
+     * @param data    Initial data set when the viewer was added.
      */
     @ApiStatus.OverrideOnly
     @ApiStatus.Experimental
