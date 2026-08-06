@@ -215,15 +215,16 @@ class InventoryPreviewPanel : JPanel() {
     }
 
     // The top-left corner the grid/title would sit at with no extra space to center within,
-    // i.e. the tight bounds used for a cropped export. The sprite frame already reserves room
-    // for the title in its own texture, so only the frame-less fallback needs the extra top gap.
+    // i.e. the minimum viewport size before centering kicks in. The sprite frame already
+    // reserves room for the title in its own texture, so only the frame-less fallback needs
+    // the extra top gap.
     private fun logicalOrigin(model: PreviewModel): Pair<Int, Int> {
         val topReserve = if (chestSpriteFor(model) != null) MIN_MARGIN else nonSpriteTopReserve()
         return MIN_MARGIN to topReserve
     }
 
-    // The panel's content size at zoom = 1, with no viewport slack included. Used both to size
-    // the component's preferred size (scaled by zoom) and to size a tightly-cropped export.
+    // The panel's content size at zoom = 1, with no viewport slack included. Used to size the
+    // component's preferred size, scaled by zoom.
     private fun logicalContentSize(model: PreviewModel): Dimension {
         val size = gridContentSize(model)
         val (_, topReserve) = logicalOrigin(model)
@@ -232,9 +233,11 @@ class InventoryPreviewPanel : JPanel() {
 
     // Sized from the title font's real ascent/descent rather than a guessed constant, so the
     // reserved band always fits the title regardless of font metrics.
-    private fun nonSpriteTopReserve(): Int {
+    private fun nonSpriteTopReserve(): Int = MIN_MARGIN + nonSpriteTitleReserve()
+
+    private fun nonSpriteTitleReserve(): Int {
         val fm = getFontMetrics(titleFont ?: font)
-        return MIN_MARGIN + fm.ascent + fm.descent + TITLE_GRID_GAP
+        return fm.ascent + fm.descent + TITLE_GRID_GAP
     }
 
     // Shared by painting and click hit-testing so the two can never drift apart.
@@ -365,15 +368,18 @@ class InventoryPreviewPanel : JPanel() {
 
     // Renders just the title + grid, cropped tightly to their content and with a fully
     // transparent background, for exporting (e.g. "copy as image") independent of the current
-    // on-screen zoom or however much extra viewport space the panel happens to occupy.
+    // on-screen zoom or however much extra viewport space the panel happens to occupy. Unlike
+    // logicalOrigin/logicalContentSize (which reserve MIN_MARGIN breathing room for the
+    // on-screen, centered view), this has no side margins and only reserves top space for a
+    // title that isn't already baked into the sprite texture.
     fun renderContentImage(): BufferedImage? {
         val currentModel = model ?: return null
-        val size = logicalContentSize(currentModel)
+        val size = exportContentSize(currentModel)
         val image = BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_ARGB)
         val g = image.createGraphics()
         try {
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-            val (originX, originY) = logicalOrigin(currentModel)
+            val (originX, originY) = exportOrigin(currentModel)
             val sprite = chestSpriteFor(currentModel)
             if (sprite != null) {
                 paintSpriteGrid(g, currentModel, sprite, originX, originY)
@@ -385,6 +391,17 @@ class InventoryPreviewPanel : JPanel() {
             g.dispose()
         }
         return image
+    }
+
+    private fun exportOrigin(model: PreviewModel): Pair<Int, Int> {
+        val topReserve = if (chestSpriteFor(model) != null) 0 else nonSpriteTitleReserve()
+        return 0 to topReserve
+    }
+
+    private fun exportContentSize(model: PreviewModel): Dimension {
+        val size = gridContentSize(model)
+        val (_, topReserve) = exportOrigin(model)
+        return Dimension(size.width, topReserve + size.height)
     }
 
     private fun colorForMaterial(material: String): Color {
