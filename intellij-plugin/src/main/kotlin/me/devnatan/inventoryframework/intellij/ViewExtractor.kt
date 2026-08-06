@@ -80,7 +80,7 @@ object ViewExtractor {
             maxSize = maxSize,
             title = title,
             layout = layout,
-            slots = slots + remapByAnchor(items.availableSlotBindings, anchorToSlots),
+            slots = slots + remapByAnchorSequence(items.availableSlotBindings, anchorToSlots),
             states = states.declarations,
             conditionalItems = conditionalItems + remapByAnchor(items.availableSlotConditionalItems, anchorToSlots),
             clickActions = clickActions + remapByAnchor(clickActionResult.availableSlotBound, anchorToSlots),
@@ -109,6 +109,21 @@ object ViewExtractor {
         if (bindings.isEmpty()) return emptyMap()
         val values = mutableMapOf<Int, T>()
         bindings.forEach { (anchor, value) -> anchorToSlots[anchor]?.forEach { values[it] = value } }
+        return values
+    }
+
+    // Like remapByAnchor, but for item bindings that can vary per iteration - a loop's induction
+    // variable read as an item's amount (see ItemExtractor.resolveAvailableSlotItems). Each
+    // resolved slot gets the binding at its own position in the call site's list; if there are more
+    // slots than bindings, the last binding repeats, which is exactly what a single-element list
+    // (every non-varying availableSlot(...) shape) does across all of its resolved slots.
+    private fun <T> remapByAnchorSequence(bindings: Map<Int, List<T>>, anchorToSlots: Map<Int, List<Int>>): Map<Int, T> {
+        if (bindings.isEmpty()) return emptyMap()
+        val values = mutableMapOf<Int, T>()
+        bindings.forEach { (anchor, perIteration) ->
+            if (perIteration.isEmpty()) return@forEach
+            anchorToSlots[anchor]?.forEachIndexed { i, slot -> values[slot] = perIteration.getOrElse(i) { perIteration.last() } }
+        }
         return values
     }
 

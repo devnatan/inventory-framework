@@ -2,7 +2,19 @@ package me.devnatan.inventoryframework.intellij
 
 import com.intellij.openapi.util.TextRange
 
-data class PreviewSlot(val material: String?, val dynamic: Boolean, val sourceRange: TextRange? = null)
+// amount is null either because there's no ItemStack(Material, int) constructor to read from (the
+// single-arg constructor, always 1) or its argument is a constant that just doesn't need a badge
+// (1, 0, negative - vanilla only badges a stack of 2+). amountDynamic distinguishes that from a
+// second constructor argument that genuinely couldn't be resolved to a single value (e.g. a
+// reassigned/loop variable, which really does differ per read) - that case still renders, as "?",
+// rather than silently looking identical to "no count at all".
+data class PreviewSlot(
+    val material: String?,
+    val dynamic: Boolean,
+    val amount: Int? = null,
+    val amountDynamic: Boolean = false,
+    val sourceRange: TextRange? = null,
+)
 
 enum class PreviewStateKind { BOOLEAN, INT }
 
