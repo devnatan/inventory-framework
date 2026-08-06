@@ -47,6 +47,16 @@ the user's code, so anything that depends on runtime state can only ever be appr
 - `availableSlot()` / `availableSlot(item)` / `availableSlot((index, builder) -> ...)`, placed by
   mirroring the runtime's own next-available-slot algorithm (`AvailableSlotInterceptor`) against
   what's already been statically extracted — see limitations below for what this can't account for.
+- Stack count: `new ItemStack(Material.X, amount)`'s second constructor argument, rendered as the
+  vanilla bottom-right count badge when it resolves to a literal or a local variable that's never
+  reassigned (so its initializer really is its value everywhere it's read), and is greater than `1`
+  (vanilla doesn't badge a single item, and a resolved `0`/negative amount is never shown either).
+  Inside an `availableSlot(...)` loop specifically (see `ForLoopAnalyzer`), an amount that's
+  literally the loop's own counter is resolved per iteration - `for (int i = 1; i <= 5; i++)
+  render.availableSlot(new ItemStack(Material.X, i))` badges `1` through `5` across the five slots
+  it actually claims, not one repeated number. Any other variable that genuinely differs per read -
+  a loop counter used some other way, or any other reassigned local - can't be reduced to a single
+  number, so it renders as `?` instead of a wrong frozen value.
 
 **Rendering**
 - `CHEST`-type views render on top of bundled sprite frames (`resources/assets/sprites/chest-1.png`
