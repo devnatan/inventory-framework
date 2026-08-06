@@ -23,7 +23,7 @@ private const val TITLE_GRID_GAP = 6
 
 // Vanilla Minecraft's default font renders glyphs about 7px tall unscaled; scaled up to match
 // the sprite grid it reads close to how the game actually looks, rather than a generic UI size.
-private const val BASE_TITLE_FONT_SIZE = 9f
+private const val BASE_TITLE_FONT_SIZE = 10f
 private const val BASE_SLOT_NUMBER_FONT_SIZE = 8f
 
 // Vanilla Minecraft draws every container's title at (8, 6) relative to the top-left corner
@@ -56,16 +56,16 @@ private val chestSprites: Map<Int, BufferedImage?> by lazy {
 
 // Mirrors the Minecraft default font's blocky look; null if the resource is missing or the
 // platform rejects the font file, in which case callers fall back to the panel's default font.
-private val monocraftFont: Font? by lazy {
+private val minecraftFont: Font? by lazy {
     runCatching {
-        InventoryPreviewPanel::class.java.getResourceAsStream("/assets/fonts/monocraft/Monocraft.otf")?.use {
+        InventoryPreviewPanel::class.java.getResourceAsStream("/assets/fonts/MinecraftRegular.otf")?.use {
             Font.createFont(Font.TRUETYPE_FONT, it)
         }
     }.getOrNull()
 }
 
-private val titleFont: Font? by lazy { monocraftFont?.deriveFont(Font.PLAIN, TITLE_FONT_SIZE) }
-private val slotNumberFont: Font? by lazy { monocraftFont?.deriveFont(Font.PLAIN, SLOT_NUMBER_FONT_SIZE) }
+private val titleFont: Font? by lazy { minecraftFont?.deriveFont(Font.PLAIN, TITLE_FONT_SIZE) }
+private val slotNumberFont: Font? by lazy { minecraftFont?.deriveFont(Font.PLAIN, SLOT_NUMBER_FONT_SIZE) }
 
 class InventoryPreviewPanel : JPanel() {
 
@@ -150,7 +150,7 @@ class InventoryPreviewPanel : JPanel() {
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
-        (g as Graphics2D).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+        (g as Graphics2D).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF)
         g.scale(zoom, zoom)
         val currentModel = model
         if (currentModel == null) {
@@ -378,7 +378,7 @@ class InventoryPreviewPanel : JPanel() {
         val image = BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_ARGB)
         val g = image.createGraphics()
         try {
-            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF)
             val (originX, originY) = exportOrigin(currentModel)
             val sprite = chestSpriteFor(currentModel)
             if (sprite != null) {
