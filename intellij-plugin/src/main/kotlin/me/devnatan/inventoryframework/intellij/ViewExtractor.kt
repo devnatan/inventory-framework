@@ -66,6 +66,13 @@ object ViewExtractor {
         val clickActions =
             clickActionResult.indexed + layoutBoundValues(layout, clickActionResult.layoutBound, columns)
 
+        // availableSlot(...)'s real slot(s) depend on every call site in the file (and, inside a
+        // countable loop, how many times it runs) plus everything already occupied by explicit
+        // bindings, so it can only be resolved once `slots` (the explicit ones) is known - see
+        // AvailableSlotResolver.
+        val availableAnchors = AvailableSlotResolver.collectAnchors(uFile)
+        val anchorToSlots = AvailableSlotResolver.resolve(availableAnchors, slots.keys, layout, columns, maxSize)
+
         return PreviewModel(
             viewTypeName = viewTypeFieldName ?: DEFAULT_VIEW_TYPE_NAME,
             rows = rows,
@@ -73,10 +80,10 @@ object ViewExtractor {
             maxSize = maxSize,
             title = title,
             layout = layout,
-            slots = slots,
+            slots = slots + remapByAnchor(items.availableSlotBindings, anchorToSlots),
             states = states.declarations,
-            conditionalItems = conditionalItems,
-            clickActions = clickActions,
+            conditionalItems = conditionalItems + remapByAnchor(items.availableSlotConditionalItems, anchorToSlots),
+            clickActions = clickActions + remapByAnchor(clickActionResult.availableSlotBound, anchorToSlots),
         )
     }
 
@@ -90,6 +97,18 @@ object ViewExtractor {
                 bindings[character]?.let { values[row * columns + col] = it }
             }
         }
+        return values
+    }
+
+    // Shared by items, conditional items and click actions bound through availableSlot(...) - all
+    // three are keyed by call-site anchor until AvailableSlotResolver assigns real slots, one call
+    // site's single statically-extracted binding fanning out to every slot it claimed (more than
+    // one when the call is inside a countable loop). A call site missing from anchorToSlots ran
+    // out of container capacity and is dropped rather than shown at a wrong or arbitrary position.
+    private fun <T> remapByAnchor(bindings: Map<Int, T>, anchorToSlots: Map<Int, List<Int>>): Map<Int, T> {
+        if (bindings.isEmpty()) return emptyMap()
+        val values = mutableMapOf<Int, T>()
+        bindings.forEach { (anchor, value) -> anchorToSlots[anchor]?.forEach { values[it] = value } }
         return values
     }
 

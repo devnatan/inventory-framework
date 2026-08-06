@@ -7,6 +7,13 @@ import org.jetbrains.uast.skipParenthesizedExprDown
 internal sealed class SlotTarget {
     data class Indices(val slots: List<Int>) : SlotTarget()
     data class Layout(val character: Char) : SlotTarget()
+
+    // availableSlot()'s real slot isn't known until every call site in the file has been
+    // collected (AvailableSlotResolver), so it's identified here by its call site's source offset
+    // rather than a resolved index - anchor lets bindings from the same call site (e.g. both
+    // withItem and onClick chained onto the same availableSlot()) converge on the same slot once
+    // resolved, without conflating it with a different availableSlot() call elsewhere in the file.
+    data class Available(val anchor: Int) : SlotTarget()
 }
 
 // Shared by ItemExtractor (withItem/renderWith/onRender) and ClickHandlerExtractor (onClick):
@@ -43,9 +50,18 @@ internal object SlotTargetResolver {
             "column" -> (args.getOrNull(0)?.evaluate() as? Int)?.let { columnIndices(it, rows, columns) }
             "firstColumn" -> columnIndices(1, rows, columns)
             "lastColumn" -> columnIndices(columns, rows, columns)
+            // Both the no-arg chained-builder form (`.availableSlot().withItem(...)`) and the
+            // direct-item sugar (`.availableSlot(item)`) are valid receivers here; the lambda-factory
+            // form (`.availableSlot((index, builder) -> ...)`) never appears as a receiver since it
+            // returns void, but is otherwise handled the same way via resolveFactoryLambda below.
+            "availableSlot" -> if (args.size <= 1) anchorOf(call)?.let { SlotTarget.Available(it) } else null
             else -> null
         }
     }
+
+    // Identifies an availableSlot(...) call site so bindings discovered from different receiver
+    // chains (or different extractor passes over the same UFile) can be matched back to it.
+    fun anchorOf(call: UCallExpression): Int? = call.sourcePsi?.textRange?.startOffset
 
     // Mirrors SlotConverter#convertSlot in the core module: 1-indexed row/column to a 0-indexed slot.
     fun slotIndex(row1Indexed: Int, column1Indexed: Int, rows: Int, columns: Int): Int? {
@@ -83,6 +99,11 @@ internal object SlotTargetResolver {
             } else null
             "firstColumn" -> if (args.size == 1) columnIndices(1, rows, columns)?.let { it to args[0] } else null
             "lastColumn" -> if (args.size == 1) columnIndices(columns, rows, columns)?.let { it to args[0] } else null
+            "availableSlot" -> if (args.size == 1) {
+                anchorOf(node)?.let { SlotTarget.Available(it) }?.let { it to args[0] }
+            } else {
+                null
+            }
             else -> null
         } ?: return null
 

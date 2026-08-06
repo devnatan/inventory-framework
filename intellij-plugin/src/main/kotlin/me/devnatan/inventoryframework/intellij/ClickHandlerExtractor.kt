@@ -16,9 +16,16 @@ import org.jetbrains.uast.visitor.AbstractUastVisitor
 
 private const val FRAMEWORK_PACKAGE_PREFIX = "me.devnatan.inventoryframework"
 private const val ON_CLICK_METHOD = "onClick"
+private const val AVAILABLE_SLOT_METHOD = "availableSlot"
 private val ROW_COLUMN_FACTORY_METHODS = setOf("row", "firstRow", "lastRow", "column", "firstColumn", "lastColumn")
 
-class ClickActionExtractionResult(val indexed: Map<Int, PreviewClickAction>, val layoutBound: Map<Char, PreviewClickAction>)
+class ClickActionExtractionResult(
+    val indexed: Map<Int, PreviewClickAction>,
+    val layoutBound: Map<Char, PreviewClickAction>,
+    // Keyed by availableSlot(...) call site (SlotTarget.Available.anchor); ViewExtractor remaps
+    // these onto real slots once AvailableSlotResolver has run.
+    val availableSlotBound: Map<Int, PreviewClickAction>,
+)
 
 // Finds `.onClick(handler)` bindings, both the direct chain form ItemExtractor also resolves for
 // withItem (`slot(i).onClick(...)`, possibly with a `.withItem(...)` in between) and the row/column
@@ -36,11 +43,13 @@ object ClickHandlerExtractor {
     ): ClickActionExtractionResult {
         val indexed = mutableMapOf<Int, PreviewClickAction>()
         val layoutBound = mutableMapOf<Char, PreviewClickAction>()
+        val availableSlotBound = mutableMapOf<Int, PreviewClickAction>()
 
         fun apply(target: SlotTarget, action: PreviewClickAction) {
             when (target) {
                 is SlotTarget.Indices -> target.slots.forEach { indexed[it] = action }
                 is SlotTarget.Layout -> layoutBound[target.character] = action
+                is SlotTarget.Available -> availableSlotBound[target.anchor] = action
             }
         }
 
@@ -66,11 +75,22 @@ object ClickHandlerExtractor {
                     return false
                 }
 
+                // Only the BiConsumer factory-lambda shape of availableSlot(...) needs handling here
+                // (`.availableSlot((index, builder) -> builder.onClick(...))`); the 0/1-arg chained
+                // form (`.availableSlot().onClick(...)`) is already covered by the ON_CLICK_METHOD
+                // branch above, whose receiver-chain walk resolves back to it via SlotTargetResolver.
+                if (methodName == AVAILABLE_SLOT_METHOD) {
+                    resolveFactoryClickAction(node, rows, columns, stateIndex)?.let { (target, action) ->
+                        apply(target, action)
+                    }
+                    return false
+                }
+
                 return false
             }
         })
 
-        return ClickActionExtractionResult(indexed, layoutBound)
+        return ClickActionExtractionResult(indexed, layoutBound, availableSlotBound)
     }
 
     private fun resolveFactoryClickAction(

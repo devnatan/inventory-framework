@@ -8,6 +8,7 @@ import org.jetbrains.uast.UCallExpression
 import org.jetbrains.uast.UExpression
 import org.jetbrains.uast.UFile
 import org.jetbrains.uast.UIfExpression
+import org.jetbrains.uast.ULambdaExpression
 import org.jetbrains.uast.ULiteralExpression
 import org.jetbrains.uast.UReferenceExpression
 import org.jetbrains.uast.UUnaryExpression
@@ -22,6 +23,7 @@ import org.jetbrains.uast.visitor.AbstractUastVisitor
 private const val ITEM_STACK_FQN = "org.bukkit.inventory.ItemStack"
 private const val MATERIAL_FQN = "org.bukkit.Material"
 private const val FRAMEWORK_PACKAGE_PREFIX = "me.devnatan.inventoryframework"
+private const val AVAILABLE_SLOT_METHOD = "availableSlot"
 private val ITEM_BINDING_METHODS = setOf("withItem", "renderWith", "onRender")
 private val ROW_COLUMN_FACTORY_METHODS = setOf("row", "firstRow", "lastRow", "column", "firstColumn", "lastColumn")
 // Java's `==`/`!=` map to IDENTITY_EQUALS/IDENTITY_NOT_EQUALS in UAST (not EQUALS/NOT_EQUALS,
@@ -35,6 +37,10 @@ class ItemExtractionResult(
     val layoutBindings: Map<Char, PreviewSlot>,
     val indexedConditionalItems: Map<Int, ConditionalItem>,
     val layoutConditionalItems: Map<Char, ConditionalItem>,
+    // Keyed by availableSlot(...) call site (SlotTarget.Available.anchor), not a resolved slot -
+    // ViewExtractor remaps these onto real slots once AvailableSlotResolver has run.
+    val availableSlotBindings: Map<Int, PreviewSlot>,
+    val availableSlotConditionalItems: Map<Int, ConditionalItem>,
 )
 
 object ItemExtractor {
@@ -49,12 +55,15 @@ object ItemExtractor {
         val layoutBindings = mutableMapOf<Char, PreviewSlot>()
         val indexedConditionalItems = mutableMapOf<Int, ConditionalItem>()
         val layoutConditionalItems = mutableMapOf<Char, ConditionalItem>()
+        val availableSlotBindings = mutableMapOf<Int, PreviewSlot>()
+        val availableSlotConditionalItems = mutableMapOf<Int, ConditionalItem>()
 
         fun apply(target: SlotTarget, slot: PreviewSlot?) {
             if (slot == null) return
             when (target) {
                 is SlotTarget.Indices -> target.slots.forEach { indexedSlots[it] = slot }
                 is SlotTarget.Layout -> layoutBindings[target.character] = slot
+                is SlotTarget.Available -> availableSlotBindings[target.anchor] = slot
             }
         }
 
@@ -62,6 +71,7 @@ object ItemExtractor {
             when (target) {
                 is SlotTarget.Indices -> target.slots.forEach { indexedConditionalItems[it] = item }
                 is SlotTarget.Layout -> layoutConditionalItems[target.character] = item
+                is SlotTarget.Available -> availableSlotConditionalItems[target.anchor] = item
             }
         }
 
@@ -97,6 +107,19 @@ object ItemExtractor {
                     return false
                 }
 
+                // availableSlot(...) has two single-arg shapes that only differ by argument type -
+                // a BiConsumer factory lambda (searched the same way as row/column factories) or a
+                // direct ItemStack (the Bukkit `availableSlot(item)` sugar, handled by
+                // resolveDirectItemCall like firstSlot(item)/lastSlot(item)) - so both are tried,
+                // whichever matches the actual argument shape.
+                if (methodName == AVAILABLE_SLOT_METHOD) {
+                    val result = resolveFactoryCall(node, rows, columns) ?: resolveDirectItemCall(node, rows, columns)
+                    result?.let { (target, itemExpr) ->
+                        apply(target, resolveItem(itemExpr)?.copy(sourceRange = range))
+                    }
+                    return false
+                }
+
                 resolveDirectItemCall(node, rows, columns)?.let { (target, itemExpr) ->
                     apply(target, resolveItem(itemExpr)?.copy(sourceRange = range))
                 }
@@ -104,7 +127,14 @@ object ItemExtractor {
             }
         })
 
-        return ItemExtractionResult(indexedSlots, layoutBindings, indexedConditionalItems, layoutConditionalItems)
+        return ItemExtractionResult(
+            indexedSlots,
+            layoutBindings,
+            indexedConditionalItems,
+            layoutConditionalItems,
+            availableSlotBindings,
+            availableSlotConditionalItems,
+        )
     }
 
     // row/column/firstRow/lastRow/firstColumn/lastColumn also have a `(BiConsumer<Integer, T> factory)`
@@ -140,6 +170,13 @@ object ItemExtractor {
                 val ch = args[0].evaluate() as? Char ?: return null
                 SlotTarget.Layout(ch) to args[1]
             } else null
+            // Only the direct-item shape (`availableSlot(item)`) belongs here; the factory-lambda
+            // shape is tried first by the caller and never reaches this branch.
+            "availableSlot" -> if (args.size == 1 && args[0].skipParenthesizedExprDown() !is ULambdaExpression) {
+                SlotTargetResolver.anchorOf(node)?.let { SlotTarget.Available(it) to args[0] }
+            } else {
+                null
+            }
             else -> null
         }
     }
