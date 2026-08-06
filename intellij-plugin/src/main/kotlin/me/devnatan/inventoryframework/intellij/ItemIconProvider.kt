@@ -77,13 +77,14 @@ object ItemIconProvider {
 
     private fun loadIcon(name: String): BufferedImage? {
         val jar = clientJar() ?: return null
-        val elements = resolveElements(jar, name)
+        val resolved = resolveElements(jar, name)
+        val elements = resolved?.first
         if (elements != null) {
-            renderElements(jar, elements.first, elements.second)?.let { return it }
+            renderElements(jar, elements, resolved.second)?.let { return it }
         }
 
         val direct = readEntry(jar, "$TEXTURE_ROOT/item/$name.png") ?: readEntry(jar, "$TEXTURE_ROOT/block/$name.png")
-        val fromModel = elements?.second?.let { pickTexture(jar, it, FLAT_TEXTURE_KEYS) }
+        val fromModel = resolved?.second?.let { pickTexture(jar, it, FLAT_TEXTURE_KEYS) }
         return (direct ?: fromModel)?.let(::normalize)
     }
 
@@ -94,10 +95,13 @@ object ItemIconProvider {
     // then walks "parent" upward, merging each level's "textures" (a child's own values win) until
     // a model with "elements" is found. Stops there rather than continuing further up, since every
     // vanilla model that defines shape also defines (or inherits from what's already been merged)
-    // concrete texture values for it. Returns null if the chain ends without ever finding elements
-    // (flat items like tools/food terminate at item/generated, which has neither) - the merged
-    // texture map is still returned in that case, letting the caller fall back to a flat texture.
-    private fun resolveElements(jar: ZipFile, name: String): Pair<List<ModelElement>, Map<String, String>>? {
+    // concrete texture values for it. The merged texture map is always returned alongside whatever
+    // elements were found (possibly null, e.g. flat items like tools/food that terminate at
+    // item/generated, which has neither) - callers fall back to it for a flat texture. This matters
+    // even for a flat item whose own layer0 texture isn't named after the material itself (e.g. a
+    // stained glass pane's flat icon reuses its stained-glass block's texture) - only this merged
+    // map, not a guess based on the material's own name, can recover the right texture path there.
+    private fun resolveElements(jar: ZipFile, name: String): Pair<List<ModelElement>?, Map<String, String>>? {
         var path: String? = findLeafModelPath(jar, name) ?: return null
         val textureLayers = mutableListOf<Map<String, String>>()
         var elements: List<ModelElement>? = null
@@ -116,7 +120,7 @@ object ItemIconProvider {
 
         val merged = mutableMapOf<String, String>()
         for (layer in textureLayers.asReversed()) merged.putAll(layer)
-        return elements?.let { it to merged }
+        return elements to merged
     }
 
     // A material's displayed model isn't always reachable by guessing "models/item/<name>.json"
