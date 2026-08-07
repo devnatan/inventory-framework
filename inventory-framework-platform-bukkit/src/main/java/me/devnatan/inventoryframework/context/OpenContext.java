@@ -13,6 +13,7 @@ import me.devnatan.inventoryframework.ViewConfig;
 import me.devnatan.inventoryframework.ViewConfigBuilder;
 import me.devnatan.inventoryframework.ViewContainer;
 import me.devnatan.inventoryframework.Viewer;
+import me.devnatan.inventoryframework.state.AsyncState;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -31,6 +32,7 @@ public class OpenContext extends PlatformConfinedContext implements IFOpenContex
 
     // --- User Provided ---
     private CompletableFuture<Void> waitTask;
+    private AsyncState<?> waitState;
     private ViewConfigBuilder inheritedConfigBuilder;
 
     // --- Properties ---
@@ -137,6 +139,11 @@ public class OpenContext extends PlatformConfinedContext implements IFOpenContex
     @Override
     public final void waitUntil(@NotNull CompletableFuture<Void> task) {
         this.waitTask = task;
+    }
+
+    @Override
+    public void waitFor(@NotNull AsyncState<?> state) {
+        this.waitState = state;
     }
 
     @Override

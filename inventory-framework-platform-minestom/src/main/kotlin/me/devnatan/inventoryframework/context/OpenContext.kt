@@ -6,6 +6,7 @@ import me.devnatan.inventoryframework.ViewConfig
 import me.devnatan.inventoryframework.ViewConfigBuilder
 import me.devnatan.inventoryframework.ViewContainer
 import me.devnatan.inventoryframework.Viewer
+import me.devnatan.inventoryframework.state.AsyncState
 import net.kyori.adventure.text.Component
 import net.minestom.server.entity.Player
 import org.jetbrains.annotations.ApiStatus
@@ -44,6 +45,7 @@ class OpenContext
         // --- User Provided ---
 
         private var waitTask: CompletableFuture<Void>? = null
+        private var waitState: AsyncState<*>? = null
         private var inheritedConfigBuilder: ViewConfigBuilder? = null
 
         // --- Properties ---
@@ -107,6 +109,10 @@ class OpenContext
 
         override fun waitUntil(task: CompletableFuture<Void>) {
             this.waitTask = task
+        }
+
+        override fun waitFor(state: AsyncState<*>) {
+            this.waitState = state
         }
 
         override fun getConfig(): ViewConfig =
