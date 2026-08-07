@@ -53,7 +53,7 @@ public final class FirstRenderInterceptor implements PipelineInterceptor<Virtual
     private void registerComponents(IFRenderContext context) {
         context.getComponentFactories().stream()
                 .map(ComponentFactory::create)
-                .peek(this::assignReference)
+                .peek(component -> assignReference(context, component))
                 .forEach(context::addComponent);
     }
 
@@ -62,11 +62,11 @@ public final class FirstRenderInterceptor implements PipelineInterceptor<Virtual
      *
      * @param component The component to assign the reference.
      */
-    private void assignReference(Component component) {
+    private void assignReference(IFRenderContext context, Component component) {
         final Ref<Component> ref = component.getReference();
         if (ref == null) return;
 
-        ref.assign(component);
+        ref.assign(context, component);
         debug("Reference assigned to %s", component.getClass().getSimpleName());
     }
 
