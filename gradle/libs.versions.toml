@@ -9,7 +9,7 @@ jetbrains-annotations = "26.0.2"
 # inventory-framework-platform-paper also requires a Java 25 toolchain, since Paper's own published
 # artifacts for this version declare that requirement (see its build.gradle.kts).
 spigot = "26.1-R0.1-SNAPSHOT"
-paperSpigot = "26.1.2.build.+"
+paperSpigot = "26.2.build.87.+"
 junit = "6.0.0"
 mockito = "4.11.0"
 adventure-api = "4.25.0"
