@@ -98,9 +98,14 @@ public final class ViewConfigBuilder {
         return this;
     }
 
-    // TODO needs documentation
+    /**
+     * Expands the size of the inventory to the max permitted by {@link #getType() its type}.
+     *
+     * @return This configuration builder.
+     * @see ViewType#getMaxSize()
+     */
     public ViewConfigBuilder maxSize() {
-        throw new UnsupportedOperationException("TODO");
+        return size(Integer.MAX_VALUE);
     }
 
     /**
@@ -278,9 +283,11 @@ public final class ViewConfigBuilder {
                         option, option.defaultValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+        final int size = getSize() == Integer.MAX_VALUE ? getType().getMaxSize() : getSize();
+
         return new ViewConfig(
                 getTitle(),
-                getSize(),
+                size,
                 getType(),
                 optionsMap,
                 getLayout(),

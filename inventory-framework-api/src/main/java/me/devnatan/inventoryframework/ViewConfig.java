@@ -118,7 +118,6 @@ public class ViewConfig {
         return false;
     }
 
-    // TODO docs
     @SuppressWarnings("unused")
     @VisibleForTesting
     public <T> boolean isOptionSet(@NotNull Option<T> option, T value) {
@@ -145,7 +144,6 @@ public class ViewConfig {
     public ViewConfig merge(ViewConfig other) {
         if (other == null) return this;
 
-        // TODO merge "options" and "modifiers" from both, distinctly
         return new ViewConfig(
                 merge(other, ViewConfig::getTitle, Objects::nonNull),
                 merge(other, ViewConfig::getSize, value -> value != 0),
@@ -169,7 +167,6 @@ public class ViewConfig {
         return value;
     }
 
-    // TODO docs
     @SuppressWarnings("unused")
     @FunctionalInterface
     public interface Modifier {
