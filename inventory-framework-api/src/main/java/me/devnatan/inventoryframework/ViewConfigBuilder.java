@@ -98,13 +98,13 @@ public final class ViewConfigBuilder {
         return this;
     }
 
-	/**
-	 * Expands the size of the inventory to the max permitted by {@link #getType() its type}.
-	 *
-	 * @return This configuration builder.
-	 * @see ViewType#getMaxSize()
-	 */
-	public ViewConfigBuilder maxSize() {
+    /**
+     * Expands the size of the inventory to the max permitted by {@link #getType() its type}.
+     *
+     * @return This configuration builder.
+     * @see ViewType#getMaxSize()
+     */
+    public ViewConfigBuilder maxSize() {
         return size(Integer.MAX_VALUE);
     }
 
@@ -283,11 +283,11 @@ public final class ViewConfigBuilder {
                         option, option.defaultValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-		final int size = getSize() == Integer.MAX_VALUE ? getType().getMaxSize() : getSize();
+        final int size = getSize() == Integer.MAX_VALUE ? getType().getMaxSize() : getSize();
 
         return new ViewConfig(
                 getTitle(),
-				size,
+                size,
                 getType(),
                 optionsMap,
                 getLayout(),
