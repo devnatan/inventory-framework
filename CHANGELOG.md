@@ -1,12 +1,125 @@
 # Changelog
 
+# 3.8.0-alpha (07-29-2026)
+
+* Minecraft 26.x support (#833)
+* Entire row or column slot assignment feature (#835)
+
+# 3.7.2 (07-29-2026)
+
+* Implement Timer state (#832)
+* Fix computed pagination bugs (#834)
+* Relocate Folialib (#831)
+
+# 3.7.1 (11-30-2025)
+
+* Add player quit event handling to close viewer context. Thanks to @mtbarr (#810)
+* Fix per-player configuration (#818)
+
+# 3.7.0 (11-29-2025)
+
+* Add support for vertical pagination, alternating and top-bottom left-right orientation modes (#808)
+* Dynamic inventory title update Kyori's Adventure component support (#817)
+
+# 3.6.0 (11-27-2025)
+
+* Make component keys configurable to optimize dynamic rendering (#806)
+
+# 3.5.5 (10-17-2025)
+
+* Fix a bug that occurs when the slot is bigger than the size of the inventory. Thanks to @Webhead1104 (#803)
+
+# 3.5.4 (09-24-2025)
+
+* Update open methods to return nullable String. Thanks to @LeonJS_ (#797)
+
+# 3.5.3 (09-11-2025)
+
+* Add platform inventory close event to IFCloseContext. Thanks to @Webhead1104 (#794)
+
+# 3.5.2 (08-28-2025)
+
+* Anvil input and relocation detection fixes. Thanks to @CrazyDev05 (#791)
+
+# 3.5.1 (08-02-2025)
+
+* Fix layout and pagination items overlap (#783)
+* Reduce plugin descriptor API Version to 1.13 (#774)
+
+# 3.5.0 (07-19-2025)
+
+* Folia support (#771)
+* Fix Anvil Input inventory not being closed correctly (#772)
+
+# 3.4.1 (07-01-2025)
+
+* Downgrade and do not bundle Kotlin (#765)
+
+# 3.4.0 (06-30-2025)
+
+* Anvil Input MC 1.21.6/1.21.7 support (#764)
+* Minestom 1.21.5 support. Thanks to @ArikSquad (#734)
+
+# 3.3.10 (05-28-2025)
+
+* Fix ArrayIndexOutOfBoundsException in Bukkit container `hasItem` (#752)
+
+# 3.3.9 (05-18-2025)
+
+* Fix fast opens inconsistently setups viewers twice (#749)
+
+# 3.3.8 (04-28-2025)
+
+* Fix Java 8 source compatibility (#741)
+
+# 3.3.7 (04-28-2025)
+
+* Publish using JDK 1.8 (#740)
+
+# 3.3.6 (04-25-2025)
+
+* Fix IncompatibleClassChangeError w/ dynamic title update pre MC 1.21 (#735)
+
+# 3.3.5 (04-17-2025)
+
+* Fix issue IF not working on Minestom. Thanks to @LeonJS_ (#733)
+
+# 3.3.4 (04-11-2025)
+
+* Fix broken view while transitioning from non-IF inventories (#730)
+
+# 3.3.3 (04-11-2025)
+
+* Mark Bukkit render context as InventoryHolder (#729)
+
+# 3.3.2 (04-11-2025)
+
+* Fix do not close inventory on open (#727)
+
+# 3.3.1 (04-10-2025)
+
+* Anvil Input v1.21.4 support & some refactors. Thanks to @nicolube (#715)
+* Allow earlier state update (#720)
+* Fix relocation and versioning issues (#721)
+
+# 3.3.0 (03-29-2025)
+
+* Add Platform Support for Minestom. Thanks to @nicolube (#692)
+* `cancelInteractions` shortcut config (#712)
+* Expose pagination raw source (#710)
+* Fix context switch workflow and pipeline calls order (#703)
+* Fix ignore extendable container checks on contexts w/ layouts (#711)
+* Catch Throwable instead of RuntimeException on view init (#700)
+* Restart scheduler when viewer is added or removed (#697)
+* Set Paper platform target to JDK 21 (#701)
+
 # 3.2.0 (12-05-2024)
 
 * Minecraft v1.21.3 support. Thanks to @nicolube (#688)
 
 # 3.0.12 (12-04-2024)
 
-* Prevent catastrophic when item render or click fails. Thanks to @nicolube (#686)
+* Prevent catastrophe when item render or click fails. Thanks to @nicolube (#686)
 * Add support for Paper 1.21+ to AnvilInput. Thanks to @mfnalex (#684)
 
 # 3.0.11 (09-11-2023)
