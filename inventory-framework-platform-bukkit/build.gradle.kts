@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     id("me.devnatan.inventoryframework.library")
     alias(libs.plugins.shadowjar)
@@ -9,6 +11,8 @@ inventoryFramework {
     generateVersionFile = true
 }
 
+val folialib: Configuration by configurations.creating
+
 dependencies {
     api(projects.inventoryFrameworkPlatform)
     runtimeOnly(projects.inventoryFrameworkAnvilInput)
@@ -17,7 +21,16 @@ dependencies {
     testRuntimeOnly(libs.spigot)
     testImplementation(projects.inventoryFrameworkApi)
     testImplementation(projects.inventoryFrameworkTest)
-    implementation(libs.folialib)
+    compileOnly(libs.folialib)
+    testRuntimeOnly(libs.folialib)
+    folialib(libs.folialib)
+}
+
+tasks.replace("jar", ShadowJar::class.java).apply {
+    from(sourceSets.main.get().output)
+    configurations = listOf(folialib)
+    archiveClassifier.set("")
+    relocate("com.tcoded.folialib", "me.devnatan.inventoryframework.thirdparty.folialib")
 }
 
 tasks.shadowJar {
