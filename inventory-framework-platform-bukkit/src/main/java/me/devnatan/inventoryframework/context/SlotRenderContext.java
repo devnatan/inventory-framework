@@ -55,6 +55,11 @@ public class SlotRenderContext extends SlotContext implements IFSlotRenderContex
     }
 
     @Override
+    public final void setResult(Object result) {
+        this.item = (ItemStack) result;
+    }
+
+    @Override
     public final boolean isCancelled() {
         return cancelled;
     }

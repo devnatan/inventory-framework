@@ -34,6 +34,7 @@ public class ItemComponent implements Component, InteractionHandler {
 
     private boolean isVisible;
     private volatile String lastKey;
+    private volatile Object lastRenderedItem;
 
     public ItemComponent(
             Function<? extends IFContext, String> keyFactory,
@@ -67,6 +68,7 @@ public class ItemComponent implements Component, InteractionHandler {
         this.updateOnClick = updateOnClick;
         this.isVisible = isVisible;
         this.reference = reference;
+        this.lastRenderedItem = stack;
     }
 
     @Override
@@ -145,11 +147,15 @@ public class ItemComponent implements Component, InteractionHandler {
         if (getRenderHandler() != null) {
             final int initialSlot = getPosition();
 
+            if (lastRenderedItem != null) context.setResult(lastRenderedItem);
+
             try {
                 getRenderHandler().accept(context);
             } catch (Exception e) {
                 throw new InventoryFrameworkException("Failed to render item component", e);
             }
+
+            lastRenderedItem = context.getResult();
 
             // Externally managed components have its own displacement measures
             if (!isManagedExternally()) {
@@ -197,6 +203,7 @@ public class ItemComponent implements Component, InteractionHandler {
         boolean isWatchingAnyState =
                 getWatchingStates() != null && !getWatching().isEmpty();
         if (isVisible() && getUpdateHandler() != null) {
+            if (lastRenderedItem != null) context.setResult(lastRenderedItem);
             getUpdateHandler().accept(context);
             if (context.isCancelled()) return;
         }
