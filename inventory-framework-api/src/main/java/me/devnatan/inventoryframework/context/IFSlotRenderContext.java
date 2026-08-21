@@ -7,6 +7,15 @@ public interface IFSlotRenderContext extends IFSlotContext, IFConfinedContext {
     @ApiStatus.Internal
     Object getResult();
 
+    /**
+     * Sets the item that was rendered by the owning component in a previous render.
+	 *
+	 * <p><b><i>This is an internal inventory-framework API that should not be used from outside of
+	 * this library. No compatibility guarantees are provided.</i></b>
+     */
+    @ApiStatus.Internal
+    void setResult(Object result);
+
     boolean isCancelled();
 
     void setCancelled(boolean cancelled);

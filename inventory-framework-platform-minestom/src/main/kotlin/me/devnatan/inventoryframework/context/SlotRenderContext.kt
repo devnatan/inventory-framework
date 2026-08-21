@@ -27,6 +27,10 @@ class SlotRenderContext
 
         override fun getResult(): ItemStack = item
 
+        override fun setResult(result: Any?) {
+            item = result as? ItemStack ?: ItemStack.AIR
+        }
+
         override fun isCancelled(): Boolean = cancelled
 
         override fun setCancelled(cancelled: Boolean) {
