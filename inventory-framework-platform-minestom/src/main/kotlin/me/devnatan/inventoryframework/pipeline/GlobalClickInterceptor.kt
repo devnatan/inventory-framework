@@ -18,10 +18,12 @@ class GlobalClickInterceptor : PipelineInterceptor<VirtualView> {
 
         val event: InventoryPreClickEvent = subject.clickOrigin
 
+        val allowedOnEntityContainer =
+            subject.isOnEntityContainer && subject.config.isEntityContainerInteractionsAllowed
+        val cancelOnClick = subject.config.isOptionSet(ViewConfig.CANCEL_ON_CLICK, true)
+
         // inherit cancellation so we can un-cancel it
-        subject.isCancelled =
-            event.isCancelled ||
-            subject.config.isOptionSet(ViewConfig.CANCEL_ON_CLICK, true)
+        subject.isCancelled = event.isCancelled || (cancelOnClick && !allowedOnEntityContainer)
         subject.root.onClick(subject)
     }
 }
