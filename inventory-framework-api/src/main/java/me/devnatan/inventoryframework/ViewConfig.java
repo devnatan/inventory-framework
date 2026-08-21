@@ -31,6 +31,7 @@ public class ViewConfig {
     private final Set<Modifier> modifiers;
     private final long updateIntervalInTicks, interactionDelayInMillis;
     private final boolean transitiveInitialData;
+    private final boolean entityContainerInteractionsAllowed;
     private final TimerState updateIntervalState;
 
     public ViewConfig(
@@ -43,6 +44,7 @@ public class ViewConfig {
             long updateIntervalInTicks,
             long interactionDelayInMillis,
             boolean transitiveInitialData,
+            boolean entityContainerInteractionsAllowed,
             TimerState updateIntervalState) {
         this.title = title;
         this.size = size;
@@ -53,6 +55,7 @@ public class ViewConfig {
         this.updateIntervalInTicks = updateIntervalInTicks;
         this.interactionDelayInMillis = interactionDelayInMillis;
         this.transitiveInitialData = transitiveInitialData;
+        this.entityContainerInteractionsAllowed = entityContainerInteractionsAllowed;
         this.updateIntervalState = updateIntervalState;
     }
 
@@ -90,6 +93,17 @@ public class ViewConfig {
 
     public boolean isTransitiveInitialData() {
         return transitiveInitialData;
+    }
+
+    /**
+     * Whether interactions coming from the actor's own container (e.g. their inventory) are
+     * allowed to happen even when this view is configured to cancel interactions with its own
+     * container.
+     *
+     * @return If interactions on the actor's container are allowed.
+     */
+    public boolean isEntityContainerInteractionsAllowed() {
+        return entityContainerInteractionsAllowed;
     }
 
     @Nullable
@@ -154,6 +168,7 @@ public class ViewConfig {
                 merge(other, ViewConfig::getUpdateIntervalInTicks, value -> value != 0),
                 merge(other, ViewConfig::getInteractionDelayInMillis, value -> value != 0),
                 merge(other, ViewConfig::isTransitiveInitialData),
+                merge(other, ViewConfig::isEntityContainerInteractionsAllowed),
                 merge(other, ViewConfig::getUpdateIntervalState, Objects::nonNull));
     }
 
@@ -245,6 +260,7 @@ public class ViewConfig {
                 && Arrays.equals(getLayout(), that.getLayout())
                 && Objects.equals(getModifiers(), that.getModifiers())
                 && isTransitiveInitialData() == that.isTransitiveInitialData()
+                && isEntityContainerInteractionsAllowed() == that.isEntityContainerInteractionsAllowed()
                 && Objects.equals(getUpdateIntervalState(), that.getUpdateIntervalState());
     }
 
@@ -259,6 +275,7 @@ public class ViewConfig {
                 getUpdateIntervalInTicks(),
                 getInteractionDelayInMillis(),
                 isTransitiveInitialData(),
+                isEntityContainerInteractionsAllowed(),
                 getUpdateIntervalState());
         result = 31 * result + Arrays.hashCode(getLayout());
         return result;
@@ -275,7 +292,8 @@ public class ViewConfig {
                 + modifiers + ", updateIntervalInTicks="
                 + updateIntervalInTicks + ", interactionDelayInMillis="
                 + interactionDelayInMillis + ", transitiveInitialData="
-                + transitiveInitialData + ", updateIntervalState="
+                + transitiveInitialData + ", entityContainerInteractionsAllowed="
+                + entityContainerInteractionsAllowed + ", updateIntervalState="
                 + updateIntervalState + "}";
     }
 }

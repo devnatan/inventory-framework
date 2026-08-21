@@ -34,6 +34,7 @@ public final class ViewConfigBuilder {
     private long updateIntervalInTicks, interactionDelayInMillis;
     private TimerState updateIntervalState;
     private boolean transitiveInitialData;
+    private boolean entityContainerInteractionsAllowed;
 
     /**
      * Inherits all configuration from another {@link ViewConfigBuilder} value.
@@ -53,6 +54,7 @@ public final class ViewConfigBuilder {
         if (other.updateIntervalState != null) this.updateIntervalState = other.updateIntervalState;
         if (other.interactionDelayInMillis != 0) this.interactionDelayInMillis = other.interactionDelayInMillis;
         if (other.transitiveInitialData) this.transitiveInitialData = true;
+        if (other.entityContainerInteractionsAllowed) this.entityContainerInteractionsAllowed = true;
         this.options.addAll(other.options);
         this.modifiers.addAll(other.modifiers);
         return this;
@@ -206,6 +208,21 @@ public final class ViewConfigBuilder {
     }
 
     /**
+     * Allows interactions on the actor's own container (e.g. their inventory) to happen even
+     * though this view cancels interactions with its own container.
+     * <p>
+     * This only affects interactions on the actor's container, interactions with the view's
+     * container are unaffected and follow {@link #cancelOnClick()} and other cancel options
+     * normally.
+     *
+     * @return This configuration builder.
+     */
+    public ViewConfigBuilder allowEntityContainerInteractions() {
+        this.entityContainerInteractionsAllowed = true;
+        return this;
+    }
+
+    /**
      * Schedules the view to update every fixed interval.
      *
      * @param intervalInTicks The interval in ticks.
@@ -295,6 +312,7 @@ public final class ViewConfigBuilder {
                 getUpdateIntervalInTicks(),
                 getInteractionDelayInMillis(),
                 transitiveInitialData,
+                entityContainerInteractionsAllowed,
                 getUpdateIntervalState());
     }
 
@@ -340,5 +358,9 @@ public final class ViewConfigBuilder {
 
     public boolean isTransitiveInitialData() {
         return transitiveInitialData;
+    }
+
+    boolean isEntityContainerInteractionsAllowed() {
+        return entityContainerInteractionsAllowed;
     }
 }
