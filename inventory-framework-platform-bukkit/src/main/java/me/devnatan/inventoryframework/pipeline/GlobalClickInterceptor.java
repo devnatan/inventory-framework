@@ -20,8 +20,12 @@ public final class GlobalClickInterceptor implements PipelineInterceptor<Virtual
         final SlotClickContext context = (SlotClickContext) subject;
         final InventoryClickEvent event = context.getClickOrigin();
 
+        final boolean allowedOnEntityContainer =
+                context.isOnEntityContainer() && context.getConfig().isEntityContainerInteractionsAllowed();
+
         // inherit cancellation so we can un-cancel it
-        context.setCancelled(event.isCancelled() || context.getConfig().isOptionSet(CANCEL_ON_CLICK, true));
+        context.setCancelled(event.isCancelled()
+                || (context.getConfig().isOptionSet(CANCEL_ON_CLICK, true) && !allowedOnEntityContainer));
         context.getRoot().onClick(context);
     }
 }
