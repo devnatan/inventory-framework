@@ -1,33 +1,36 @@
 package me.devnatan.inventoryframework.runtime.thirdparty;
 
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.bukkit.Bukkit;
 
 public class McVersion implements Comparable<McVersion> {
 
+    private static final Pattern LEADING_VERSION =
+            Pattern.compile("(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?");
+
     private static final McVersion CURRENT_VERSION;
 
     static {
-        final int currentMajor = Integer.parseInt(Bukkit.getBukkitVersion().split("\\.")[0]);
-        final int currentMinor =
-                Integer.parseInt(Bukkit.getBukkitVersion().split("\\.")[1].split("-")[0]);
-        boolean hasPatch = countColons(Bukkit.getBukkitVersion()) == 3;
-        final int currentPatch = hasPatch
-                ? Integer.parseInt(Bukkit.getBukkitVersion().split("\\.")[2].split("-")[0])
-                : 0;
-
-        CURRENT_VERSION = new McVersion(currentMajor, currentMinor, currentPatch);
+        CURRENT_VERSION = parse(Bukkit.getBukkitVersion());
     }
 
-    private static int countColons(final String string) {
-        int count = 0;
-        char[] arr = string.toCharArray();
-        for (int i = 0; i < string.length(); i++) {
-            if (arr[i] == '.') {
-                count++;
-            }
+    /**
+     * Reads only the leading run of dot-separated numeric segments (major[.minor[.patch]]),
+     * so a build/commit suffix appended by a non-standard server fork (e.g. "26.2.build.17406-6bc38be")
+     * is ignored instead of throwing a {@link NumberFormatException} out of a static initializer.
+     */
+    private static McVersion parse(final String version) {
+        final Matcher matcher = LEADING_VERSION.matcher(version);
+        if (!matcher.lookingAt()) {
+            return new McVersion(1, 0, 0);
         }
-        return count;
+
+        final int major = Integer.parseInt(matcher.group(1));
+        final int minor = matcher.group(2) != null ? Integer.parseInt(matcher.group(2)) : 0;
+        final int patch = matcher.group(3) != null ? Integer.parseInt(matcher.group(3)) : 0;
+        return new McVersion(major, minor, patch);
     }
 
     private final int major;
