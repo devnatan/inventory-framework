@@ -8,7 +8,7 @@ jetbrains-annotations = "26.0.2"
 # matching modern Spigot/Paper artifact (see the versions below) instead of the old pinned 1.20.6 one.
 # inventory-framework-platform-paper also requires a Java 25 toolchain, since Paper's own published
 # artifacts for this version declare that requirement (see its build.gradle.kts).
-spigot = "26.1-R0.1-SNAPSHOT"
+spigot = "26.2-R0.1-SNAPSHOT"
 paperSpigot = "26.1.2.build.+"
 junit = "6.0.0"
 mockito = "4.11.0"
