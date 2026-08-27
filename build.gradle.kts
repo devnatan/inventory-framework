@@ -13,6 +13,7 @@ version = property("version")
 @Suppress("UnstableApiUsage")
 fun Project.nextGitTag(): String {
     val latestTag = providers.exec {
+        workingDir(project.projectDir)
         commandLine("git", "describe", "--tags", "--abbrev=0")
     }.standardOutput.asText.get().trim()
 
