@@ -36,17 +36,9 @@ final class IFInventoryListener implements Listener {
         viewFrame.unregister();
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent event) {
-        final Player player = (Player) event.getPlayer();
-        final Viewer viewer = viewFrame.getViewer(player);
-        if (viewer == null) return;
-
-        final IFRenderContext context = viewer.getCurrentContext();
-        final RootView root = context.getRoot();
-        final IFCloseContext closeContext = root.getElementFactory().createCloseContext(viewer, context, event);
-
-        root.getPipeline().execute(StandardPipelinePhases.CLOSE, closeContext);
+        event.getPlayer().closeInventory(); // todo add a new way to invalidate views properly
     }
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
