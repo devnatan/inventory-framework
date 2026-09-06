@@ -25,8 +25,8 @@ public class RowColumnSample extends View {
                                 ? new ItemStack(Material.GOLD_INGOT)
                                 : new ItemStack(Material.IRON_INGOT));
 
-        render.firstRow((pos, slot) -> slot.withItem(new ItemStack(Material.BLUE_STAINED_GLASS_PANE))
-                .onClick(intState::increment));
+        render.firstRow((pos, slot) ->
+                slot.withItem(new ItemStack(Material.BLUE_STAINED_GLASS_PANE)).onClick(intState::increment));
 
         render.lastColumn((pos, slot) -> slot.withItem(new ItemStack(Material.BLACK_STAINED_GLASS_PANE)));
     }

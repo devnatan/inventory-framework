@@ -1,7 +1,6 @@
 package me.devnatan.inventoryframework;
 
 import java.util.function.Supplier;
-
 import me.devnatan.inventoryframework.logging.Logger;
 import org.intellij.lang.annotations.PrintFormat;
 import org.jetbrains.annotations.ApiStatus;
@@ -17,19 +16,19 @@ public final class IFDebug {
 
     private static Boolean DEBUG_ENABLED = null;
 
-	private static Logger logger;
+    private static Logger logger;
 
-	static {
-		DEBUG_ENABLED = Boolean.parseBoolean(System.getProperty(SYSTEM_PROPERTY, "false"));
-	}
+    static {
+        DEBUG_ENABLED = Boolean.parseBoolean(System.getProperty(SYSTEM_PROPERTY, "false"));
+    }
 
     private IFDebug() {}
 
     /** Enables InventoryFramework debug. */
     public static void enable(Logger logger) {
-		IFDebug.logger = logger;
+        IFDebug.logger = logger;
         DEBUG_ENABLED = true;
-		debug("Debug enabled");
+        debug("Debug enabled");
     }
 
     /**
@@ -51,6 +50,6 @@ public final class IFDebug {
      */
     public static void debug(@PrintFormat String message, Object... args) {
         if (!DEBUG_ENABLED) return;
-		logger.debug(String.format(message, args));
+        logger.debug(String.format(message, args));
     }
 }

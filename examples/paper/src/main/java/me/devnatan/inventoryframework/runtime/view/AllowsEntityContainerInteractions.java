@@ -14,18 +14,18 @@ public class AllowsEntityContainerInteractions extends View {
     @Override
     public void onInit(@NotNull ViewConfigBuilder config) {
         config.title("Allows player inventory interactions")
-			.size(3)
-			.cancelOnClick()
-			.allowEntityContainerInteractions();
+                .size(3)
+                .cancelOnClick()
+                .allowEntityContainerInteractions();
     }
 
-	@Override
-	public void onOpen(@NonNull OpenContext open) {
-		open.getPlayer().getInventory().addItem(new ItemStack(Material.WOODEN_PICKAXE));
-	}
+    @Override
+    public void onOpen(@NonNull OpenContext open) {
+        open.getPlayer().getInventory().addItem(new ItemStack(Material.WOODEN_PICKAXE));
+    }
 
-	@Override
+    @Override
     public void onFirstRender(@NotNull RenderContext render) {
-		render.firstSlot(new ItemStack(Material.GOLD_INGOT));
+        render.firstSlot(new ItemStack(Material.GOLD_INGOT));
     }
 }

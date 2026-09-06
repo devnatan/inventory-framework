@@ -28,8 +28,8 @@ public class IFExampleCommandExecutor implements CommandExecutor, TabCompleter {
         views.put("pagination", PaginationOrientation.class);
         views.put("timer", TimerSample.class);
         views.put("row-column", RowColumnSample.class);
-		views.put("navigation", NavigatingBetweenViewsA.class);
-		views.put("entity-interactions", AllowsEntityContainerInteractions.class);
+        views.put("navigation", NavigatingBetweenViewsA.class);
+        views.put("entity-interactions", AllowsEntityContainerInteractions.class);
     }
 
     private final ViewFrame viewFrame;
