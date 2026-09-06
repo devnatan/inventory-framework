@@ -6,13 +6,7 @@ import java.util.List;
 import java.util.Map;
 import me.devnatan.inventoryframework.View;
 import me.devnatan.inventoryframework.ViewFrame;
-import me.devnatan.inventoryframework.runtime.view.AnvilInputSample;
-import me.devnatan.inventoryframework.runtime.view.AutoUpdate;
-import me.devnatan.inventoryframework.runtime.view.Failing;
-import me.devnatan.inventoryframework.runtime.view.PaginationOrientation;
-import me.devnatan.inventoryframework.runtime.view.RowColumnSample;
-import me.devnatan.inventoryframework.runtime.view.SimplePagination;
-import me.devnatan.inventoryframework.runtime.view.TimerSample;
+import me.devnatan.inventoryframework.runtime.view.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -34,6 +28,7 @@ public class IFExampleCommandExecutor implements CommandExecutor, TabCompleter {
         views.put("pagination", PaginationOrientation.class);
         views.put("timer", TimerSample.class);
         views.put("row-column", RowColumnSample.class);
+		views.put("navigation", NavigatingBetweenViewsA.class);
     }
 
     private final ViewFrame viewFrame;

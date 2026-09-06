@@ -24,7 +24,10 @@ public class SamplePlugin extends JavaPlugin {
                         new AutoUpdate(),
                         new PaginationOrientation(),
                         new TimerSample(),
-                        new RowColumnSample())
+                        new RowColumnSample(),
+						new NavigatingBetweenViewsA(),
+					new NavigatingBetweenViewsB()
+				)
                 .register();
 
         IFExampleCommandExecutor command = new IFExampleCommandExecutor(viewFrame);
