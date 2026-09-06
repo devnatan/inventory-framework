@@ -167,6 +167,9 @@ class ViewFrame private constructor(
     override fun register(): ViewFrame {
         check(!isRegistered) { "This view frame is already registered" }
 
+        // TODO Missing Minestom specific Inventory Framework logger impl
+        //      Check `debugEnabled` here then set up just like we do on Bukkit side
+
         isRegistered = true
         PlatformUtils.setFactory(MinestomElementFactory())
         pipeline.execute(FRAME_REGISTERED, this)

@@ -17,6 +17,7 @@ public class SamplePlugin extends JavaPlugin {
     public void onEnable() {
         ViewFrame viewFrame = ViewFrame.create(this)
                 .install(AnvilInputFeature.AnvilInput)
+				.enableDebug()
                 .with(
                         new AnvilInputSample(),
                         new Failing(),
