@@ -187,9 +187,9 @@ public class ViewFrame extends IFViewFrame<ViewFrame, View> {
     public final ViewFrame register() {
         if (isRegistered()) throw new IllegalStateException("This view frame is already registered");
 
-		if (debugEnabled) {
-			IFDebug.enable(new BukkitLogger(getOwner().getLogger(), "global", true));
-		}
+        if (debugEnabled) {
+            IFDebug.enable(new BukkitLogger(getOwner().getLogger(), "global", true));
+        }
 
         PlatformUtils.setFactory(new BukkitElementFactory(getOwner()));
         tryEnableMetrics();

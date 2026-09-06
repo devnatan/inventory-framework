@@ -8,15 +8,15 @@ import org.bukkit.inventory.ItemStack;
 
 public class NavigatingBetweenViewsA extends View {
 
-	@Override
-	public void onInit(ViewConfigBuilder config) {
-		config.title("A").size(3);
-	}
+    @Override
+    public void onInit(ViewConfigBuilder config) {
+        config.title("A").size(3);
+    }
 
-	@Override
-	public void onFirstRender(RenderContext render) {
-		// Moves player to "B" view on click
-		render.firstSlot(new ItemStack(Material.DIAMOND))
-			.onClick(click -> click.openForPlayer(NavigatingBetweenViewsB.class));
-	}
+    @Override
+    public void onFirstRender(RenderContext render) {
+        // Moves player to "B" view on click
+        render.firstSlot(new ItemStack(Material.DIAMOND))
+                .onClick(click -> click.openForPlayer(NavigatingBetweenViewsB.class));
+    }
 }

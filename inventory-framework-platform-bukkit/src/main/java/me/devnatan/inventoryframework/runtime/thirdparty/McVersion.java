@@ -7,8 +7,7 @@ import org.bukkit.Bukkit;
 
 public class McVersion implements Comparable<McVersion> {
 
-    private static final Pattern LEADING_VERSION =
-            Pattern.compile("(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?");
+    private static final Pattern LEADING_VERSION = Pattern.compile("(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?");
 
     private static final McVersion CURRENT_VERSION;
 
