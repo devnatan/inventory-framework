@@ -1,6 +1,8 @@
 package me.devnatan.inventoryframework;
 
 import java.util.function.Supplier;
+
+import me.devnatan.inventoryframework.logging.Logger;
 import org.intellij.lang.annotations.PrintFormat;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -11,31 +13,23 @@ import org.jetbrains.annotations.ApiStatus;
 @ApiStatus.Internal
 public final class IFDebug {
 
-    private static final String PREFIX = "[IF]";
     private static final String SYSTEM_PROPERTY = "me.devnatan.inventoryframework.debug";
 
     private static Boolean DEBUG_ENABLED = null;
 
+	private static Logger logger;
+
+	static {
+		DEBUG_ENABLED = Boolean.parseBoolean(System.getProperty(SYSTEM_PROPERTY, "false"));
+	}
+
     private IFDebug() {}
 
-    /**
-     * Returns if debug is enabled.
-     *
-     * @return If debug is enabled.
-     */
-    public static boolean isDebugEnabled() {
-        if (DEBUG_ENABLED == null) DEBUG_ENABLED = Boolean.parseBoolean(System.getProperty(SYSTEM_PROPERTY, "false"));
-
-        return DEBUG_ENABLED;
-    }
-
-    /**
-     * Enables InventoryFramework debug.
-     *
-     * @param enabled If debug should be enabled.
-     */
-    public static void setEnabled(boolean enabled) {
-        System.setProperty(SYSTEM_PROPERTY, String.valueOf(enabled));
+    /** Enables InventoryFramework debug. */
+    public static void enable(Logger logger) {
+		IFDebug.logger = logger;
+        DEBUG_ENABLED = true;
+		debug("Debug enabled");
     }
 
     /**
@@ -45,8 +39,8 @@ public final class IFDebug {
      * @param args Arguments to apply to the message
      */
     public static void debug(Supplier<String> message, Object... args) {
-        if (!isDebugEnabled()) return;
-        System.out.println(PREFIX + " " + String.format(message.get(), args));
+        if (!DEBUG_ENABLED) return;
+        logger.debug(String.format(message.get(), args));
     }
 
     /**
@@ -56,7 +50,7 @@ public final class IFDebug {
      * @param args Arguments to apply to the message
      */
     public static void debug(@PrintFormat String message, Object... args) {
-        if (!isDebugEnabled()) return;
-        System.out.println(PREFIX + " " + String.format(message, args));
+        if (!DEBUG_ENABLED) return;
+		logger.debug(String.format(message, args));
     }
 }

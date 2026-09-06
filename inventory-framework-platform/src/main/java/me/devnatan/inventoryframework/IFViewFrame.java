@@ -29,6 +29,8 @@ public abstract class IFViewFrame<S extends IFViewFrame<S, V>, V extends Platfor
     protected final Map<String, Viewer> viewerById = new HashMap<>();
     protected Consumer<ViewConfigBuilder> defaultConfig;
 
+	protected boolean debugEnabled;
+
     @SuppressWarnings("rawtypes")
     private final Pipeline<IFViewFrame> pipeline = new Pipeline<>(FRAME_REGISTERED, FRAME_UNREGISTERED);
 
@@ -264,7 +266,7 @@ public abstract class IFViewFrame<S extends IFViewFrame<S, V>, V extends Platfor
     @SuppressWarnings("unchecked")
     @ApiStatus.Internal
     public final S enableDebug() {
-        IFDebug.setEnabled(true);
+        this.debugEnabled = true;
         return (S) this;
     }
 }

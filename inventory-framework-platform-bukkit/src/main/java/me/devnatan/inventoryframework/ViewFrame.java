@@ -15,6 +15,7 @@ import me.devnatan.inventoryframework.feature.Feature;
 import me.devnatan.inventoryframework.feature.FeatureInstaller;
 import me.devnatan.inventoryframework.internal.BukkitElementFactory;
 import me.devnatan.inventoryframework.internal.PlatformUtils;
+import me.devnatan.inventoryframework.logging.BukkitLogger;
 import me.devnatan.inventoryframework.runtime.thirdparty.Metrics;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -185,6 +186,10 @@ public class ViewFrame extends IFViewFrame<ViewFrame, View> {
     @Override
     public final ViewFrame register() {
         if (isRegistered()) throw new IllegalStateException("This view frame is already registered");
+
+		if (debugEnabled) {
+			IFDebug.enable(new BukkitLogger(getOwner().getLogger(), "global", true));
+		}
 
         PlatformUtils.setFactory(new BukkitElementFactory(getOwner()));
         tryEnableMetrics();
