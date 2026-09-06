@@ -64,7 +64,7 @@ public final class RowColumnSlotInterceptor implements PipelineInterceptor<Virtu
         int cursor = 0;
         for (int i = 0; i < factories.size(); i++) {
             while (cursor < candidateSlots.size()
-                    && AvailableSlotInterceptor.isSlotNotAvailableForAutoFilling(context, candidateSlots.get(cursor)))
+                    && !AvailableSlotInterceptor.isSlotAvailableForAutoFilling(context, candidateSlots.get(cursor)))
                 cursor++;
 
             if (cursor >= candidateSlots.size())
