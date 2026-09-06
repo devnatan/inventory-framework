@@ -53,6 +53,7 @@ class SampleServer {
         val viewFrame =
             ViewFrame
                 .create(handler)
+                .enableDebug()
                 .with(Failing(), SimplePagination(), ScheduledView())
                 .register()
 

@@ -17,6 +17,7 @@ public class SamplePlugin extends JavaPlugin {
     public void onEnable() {
         ViewFrame viewFrame = ViewFrame.create(this)
                 .install(AnvilInputFeature.AnvilInput)
+				.enableDebug()
                 .with(
                         new AnvilInputSample(),
                         new Failing(),
@@ -24,7 +25,10 @@ public class SamplePlugin extends JavaPlugin {
                         new AutoUpdate(),
                         new PaginationOrientation(),
                         new TimerSample(),
-                        new RowColumnSample())
+                        new RowColumnSample(),
+						new NavigatingBetweenViewsA(),
+					new NavigatingBetweenViewsB()
+				)
                 .register();
 
         IFExampleCommandExecutor command = new IFExampleCommandExecutor(viewFrame);

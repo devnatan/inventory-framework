@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
+
 import me.devnatan.inventoryframework.VirtualView;
 import me.devnatan.inventoryframework.component.ComponentFactory;
 import me.devnatan.inventoryframework.component.ItemComponentBuilder;
@@ -46,7 +47,7 @@ public final class AvailableSlotInterceptor implements PipelineInterceptor<Virtu
 
         int slot = 0;
         for (int i = 0; i < context.getContainer().getSize(); i++) {
-            while (isSlotNotAvailableForAutoFilling(context, slot)) slot++;
+            while (!isSlotAvailableForAutoFilling(context, slot)) slot++;
 
             try {
                 final BiFunction<Integer, Integer, ComponentFactory> factory = availableSlotFactories.get(i);
@@ -97,7 +98,7 @@ public final class AvailableSlotInterceptor implements PipelineInterceptor<Virtu
 
             // if the selected slot is not available for autofill, move it until
             // we find the next an available position
-            while (isSlotNotAvailableForAutoFilling(context, slot)) {
+            while (!isSlotAvailableForAutoFilling(context, slot)) {
                 try {
                     slot = fillablePositions[i + (++offset)];
                 } catch (final IndexOutOfBoundsException exception) {
@@ -117,17 +118,17 @@ public final class AvailableSlotInterceptor implements PipelineInterceptor<Virtu
         return result;
     }
 
-    static boolean isSlotNotAvailableForAutoFilling(IFRenderContext context, int slot) {
-        if (!context.getContainer().getType().canPlayerInteractOn(slot)) return true;
-        if (context.getContainer().getSize() >= slot) return false;
+    static boolean isSlotAvailableForAutoFilling(IFRenderContext context, int slot) {
+        if (!context.getContainer().getType().canPlayerInteractOn(slot)) return false;
+        if (context.getContainer().getSize() < slot) return false;
 
         // fast path -- check for already rendered items
-        if (context.getContainer().hasItem(slot)) return true;
+        if (context.getContainer().hasItem(slot)) return false;
 
         // we need to check component factories since components don't have been yet rendered
         return context.getComponentFactories().stream()
                 .filter(componentFactory -> componentFactory instanceof ItemComponentBuilder)
                 .map(componentFactory -> (ItemComponentBuilder<?, ?>) componentFactory)
-                .anyMatch(itemBuilder -> itemBuilder.isContainedWithin(slot));
+                .noneMatch(itemBuilder -> itemBuilder.isContainedWithin(slot));
     }
 }

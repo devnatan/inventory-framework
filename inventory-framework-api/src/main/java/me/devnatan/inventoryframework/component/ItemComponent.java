@@ -290,7 +290,7 @@ public class ItemComponent implements Component, InteractionHandler {
 
     @Override
     public String toString() {
-        return "ItemComponent{" + ", position="
+        return "ItemComponent{position="
                 + position + ", stack="
                 + stack + ", cancelOnClick="
                 + cancelOnClick + ", closeOnClick="
