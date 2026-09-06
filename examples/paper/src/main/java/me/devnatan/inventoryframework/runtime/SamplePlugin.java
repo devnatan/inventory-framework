@@ -27,7 +27,8 @@ public class SamplePlugin extends JavaPlugin {
                         new TimerSample(),
                         new RowColumnSample(),
 						new NavigatingBetweenViewsA(),
-					new NavigatingBetweenViewsB()
+						new NavigatingBetweenViewsB(),
+						new AllowsEntityContainerInteractions()
 				)
                 .register();
 
