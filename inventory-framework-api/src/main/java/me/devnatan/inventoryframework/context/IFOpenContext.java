@@ -4,6 +4,7 @@ import java.util.concurrent.CompletableFuture;
 import me.devnatan.inventoryframework.ViewConfig;
 import me.devnatan.inventoryframework.ViewConfigBuilder;
 import me.devnatan.inventoryframework.ViewContainer;
+import me.devnatan.inventoryframework.state.AsyncState;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,6 +34,18 @@ public interface IFOpenContext extends IFConfinedContext {
      * @param task The task that will be waited for.
      */
     void waitUntil(@NotNull CompletableFuture<Void> task);
+
+    /**
+     * Waits for a asynchronous state to be complete before ending this opening context and
+     * transitioning to the rendering context (waits to show the inventory to the player).
+     * <p>
+     * <b>This API is experimental and is not subject to the general compatibility guarantees such API
+     * may be changed or may be removed completely in any further release.</b>
+     *
+     * @param state The state to wait before opening the inventory.
+     */
+    @ApiStatus.Experimental
+    void waitFor(@NotNull AsyncState<?> state);
 
     /**
      * Whether opening the container to the viewer has been cancelled.
