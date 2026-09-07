@@ -1,6 +1,6 @@
 package me.devnatan.inventoryframework;
 
-import me.devnatan.inventoryframework.context.IFContext;
+import me.devnatan.inventoryframework.context.IFRenderContext;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,14 +20,27 @@ public interface Ref<E> {
      *
      * @throws UnassignedReferenceException If reference wasn't assigned to any element.
      * @return The value that this reference holds.
+     * @deprecated Use {@link #of(IFRenderContext)} instead.
      */
     @NotNull
-    E value(@NotNull IFContext context);
+    @Deprecated
+    default E value(@NotNull IFRenderContext context) {
+        return of(context);
+    }
+
+    /**
+     * Returns the value hold by this reference.
+     *
+     * @throws UnassignedReferenceException If reference wasn't assigned to any element.
+     * @return The value that this reference holds.
+     */
+    @NotNull
+    E of(@NotNull IFRenderContext context);
 
     /**
      * <b><i> This is an internal inventory-framework API that should not be used from outside of
      * this library. No compatibility guarantees are provided. </i></b>
      */
     @ApiStatus.Internal
-    void assign(Object value);
+    void assign(@NotNull IFRenderContext context, Object value);
 }
