@@ -16,6 +16,7 @@ val folialib: Configuration by configurations.creating
 dependencies {
     api(projects.inventoryFrameworkPlatform)
     runtimeOnly(projects.inventoryFrameworkAnvilInput)
+    runtimeOnly(projects.inventoryFrameworkInline)
     compileOnly(libs.spigot)
     testCompileOnly(libs.spigot)
     testRuntimeOnly(libs.spigot)

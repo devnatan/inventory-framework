@@ -21,7 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public final class RenderContext extends PlatformRenderContext<BukkitItemComponentBuilder, Context>
-        implements Context, InventoryHolder {
+        implements Context, InventoryHolder, ItemPlacement<BukkitItemComponentBuilder> {
 
     private final Player player;
 
@@ -77,6 +77,7 @@ public final class RenderContext extends PlatformRenderContext<BukkitItemCompone
      * @param slot The slot in which the item will be positioned.
      * @return An item builder to configure the item.
      */
+    @Override
     public @NotNull BukkitItemComponentBuilder slot(int slot, @Nullable ItemStack item) {
         return slot(slot).withItem(item);
     }
@@ -88,6 +89,7 @@ public final class RenderContext extends PlatformRenderContext<BukkitItemCompone
      * @param column The column (X) in which the item will be positioned.
      * @return An item builder to configure the item.
      */
+    @Override
     @NotNull
     public BukkitItemComponentBuilder slot(int row, int column, @Nullable ItemStack item) {
         return slot(row, column).withItem(item);
@@ -99,6 +101,7 @@ public final class RenderContext extends PlatformRenderContext<BukkitItemCompone
      * @param item The item that'll be set.
      * @return An item builder to configure the item.
      */
+    @Override
     public @NotNull BukkitItemComponentBuilder firstSlot(@Nullable ItemStack item) {
         return firstSlot().withItem(item);
     }
@@ -109,6 +112,7 @@ public final class RenderContext extends PlatformRenderContext<BukkitItemCompone
      * @param item The item that'll be set.
      * @return An item builder to configure the item.
      */
+    @Override
     public @NotNull BukkitItemComponentBuilder lastSlot(@Nullable ItemStack item) {
         return lastSlot().withItem(item);
     }
@@ -130,6 +134,7 @@ public final class RenderContext extends PlatformRenderContext<BukkitItemCompone
      * @param item      The item that'll represent the layout character.
      * @return An item builder to configure the item.
      */
+    @Override
     public @NotNull BukkitItemComponentBuilder layoutSlot(char character, @Nullable ItemStack item) {
         return layoutSlot(character).withItem(item);
     }
